@@ -3,11 +3,13 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import timedelta
 
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.db.base import get_db
+from app.db.models.user import User
 from app.schemas.user import User, UserCreate, Token
 from app.schemas.auth import (
     PhoneNumberRequest, OTPVerify, RegistrationComplete, 
@@ -104,10 +106,16 @@ async def verify_phone_otp(
             detail="Invalid or expired OTP"
         )
     
-    # Check if user with this phone number exists and mark as verified if found
-    user = await crud_user.get_by_phone(db, phone_number=phone_number)
+    # Check if user with this phone number exists
+    query = select(User).where(User.phone_number == phone_number)
+    result = await db.execute(query)
+    user = result.scalar()
+    
     if user:
-        user = await crud_user.mark_phone_verified(db, user=user)
+        user.phone_verified = True
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
     
     return {
         "message": "OTP verified successfully",

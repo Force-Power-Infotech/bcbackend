@@ -11,25 +11,22 @@ from app.schemas.user import UserCreate, UserUpdate
 async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
     """Get a user by email."""
     query = select(User).where(User.email == email)
-    async with db.begin():
-        result = await db.execute(query)
-        return result.unique().scalar_one_or_none()
+    result = await db.execute(query)
+    return result.scalar()
 
 
 async def get_by_phone(db: AsyncSession, phone_number: str) -> Optional[User]:
     """Get a user by phone number."""
     query = select(User).where(User.phone_number == phone_number)
-    async with db.begin():
-        result = await db.execute(query)
-        return result.unique().scalar_one_or_none()
+    result = await db.execute(query)
+    return result.scalar()
 
 
 async def get_by_username(db: AsyncSession, username: str) -> Optional[User]:
     """Get a user by username."""
     query = select(User).where(User.username == username)
-    async with db.begin():
-        result = await db.execute(query)
-        return result.unique().scalar_one_or_none()
+    result = await db.execute(query)
+    return result.scalar()
 
 
 async def get(db: AsyncSession, user_id: int) -> Optional[User]:
@@ -51,8 +48,8 @@ async def create(db: AsyncSession, *, obj_in: UserCreate) -> User:
         is_active=True,
         is_admin=False
     )
-    async with db.begin():
-        db.add(db_obj)
+    db.add(db_obj)
+    await db.commit()
     await db.refresh(db_obj)
     return db_obj
 
