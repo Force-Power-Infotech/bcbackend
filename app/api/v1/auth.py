@@ -9,14 +9,14 @@ from datetime import timedelta
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.db.base import get_db
-from app.db.models.user import User
+from app.db.models.user import User as UserModel
 from app.schemas.user import User, UserCreate, Token
 from app.schemas.auth import (
     PhoneNumberRequest, OTPVerify, RegistrationComplete, 
     LoginComplete, PhoneVerificationResponse, OTPVerificationResponse
 )
 from app.crud import crud_user
-from app.utils.otp import generate_otp, verify_otp, mock_send_otp, get_stored_otp
+from app.utils.otp import generate_otp as db_generate_otp, verify_otp as db_verify_otp, mock_send_otp
 from app.utils.email import send_verification_email
 
 router = APIRouter()
@@ -68,22 +68,16 @@ async def request_otp(
     Request an OTP to be sent to the phone number
     """
     phone_number = phone_req.phone_number
-    
+
     # Generate and send OTP
-    otp = generate_otp(phone_number)
-    
+    otp = await db_generate_otp(db, phone_number)
+
     # In production, use an actual SMS service
     mock_send_otp(phone_number, otp)
-    
-    # For development, return the OTP in the response
-    dev_otp = None
-    if settings.ENV != "production":
-        dev_otp = get_stored_otp(phone_number)
-    
+
     return {
         "message": f"OTP sent to {phone_number}",
-        "success": True,
-        **({"dev_otp": dev_otp} if dev_otp else {})
+        "success": True
     }
 
 
@@ -97,31 +91,19 @@ async def verify_phone_otp(
     """
     phone_number = otp_data.phone_number
     otp_code = otp_data.otp
-    
-    # Verify OTP
-    is_valid = verify_otp(phone_number, otp_code)
+
+    is_valid = await db_verify_otp(db, phone_number, otp_code)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP"
         )
-    
-    # Check if user with this phone number exists
-    query = select(User).where(User.phone_number == phone_number)
-    result = await db.execute(query)
-    user = result.scalar()
-    
-    if user:
-        user.phone_verified = True
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    
+
     return {
         "message": "OTP verified successfully",
-        "success": True,
-        "user_exists": user is not None
+        "success": True
     }
+
 
 
 @router.post("/login", response_model=Token)
@@ -169,7 +151,7 @@ async def complete_registration(
     otp_code = registration_data.otp
     
     # Verify OTP
-    is_valid = verify_otp(phone_number, otp_code)
+    is_valid = await db_verify_otp(db, phone_number, otp_code)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -59,7 +59,7 @@ class UserInDBBase(UserBase):
     is_admin: bool = False
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Schema for displaying User

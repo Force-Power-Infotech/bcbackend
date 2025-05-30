@@ -21,6 +21,7 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    otp = Column(String(6), nullable=True)  # Add OTP column to store the current OTP
     
     # Relationships
     sessions = relationship("Session", back_populates="user")

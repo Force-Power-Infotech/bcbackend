@@ -2,60 +2,55 @@ import random
 import string
 import time
 from typing import Dict, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.crud import crud_user
 
 # Store OTPs with expiration time (in-memory storage, will be lost on restart)
 # In production, use Redis or a database to store these
 otp_store: Dict[str, Dict[str, any]] = {}
 
-def generate_otp(phone_number: str, length: int = 6) -> str:
+async def generate_otp(db: AsyncSession, phone_number: str, length: int = 6) -> str:
     """
-    Generate a random numeric OTP of specified length
+    Generate a random numeric OTP of specified length and store it in the database.
     """
     # Generate random OTP
     otp = ''.join(random.choices(string.digits, k=length))
     
-    # Store OTP with expiration time (5 minutes)
-    expiration = time.time() + (5 * 60)  # 5 minutes from now
+    # Store OTP in the user's record in the database
+    user = await crud_user.get_by_phone(db, phone_number=phone_number)
+    if user:
+        await crud_user.update_otp(db, user=user, otp=otp)
+    
+    # For development, also store in memory
     otp_store[phone_number] = {
         "otp": otp,
-        "expiration": expiration,
-        "attempts": 0
+        "expiration": time.time() + (settings.OTP_EXPIRY_SECONDS if hasattr(settings, 'OTP_EXPIRY_SECONDS') else 600)
     }
     
+    print(f"Generated OTP {otp} for {phone_number}")
     return otp
 
-def verify_otp(phone_number: str, otp: str) -> bool:
+async def verify_otp(db: AsyncSession, phone_number: str, otp: str) -> bool:
     """
-    Verify if the provided OTP is valid for the given phone number
+    Verify the OTP against what's stored in the database.
     """
-    # Check if OTP exists for this phone number
-    if phone_number not in otp_store:
-        return False
+    print(f"Verifying OTP {otp} for {phone_number}")
     
-    stored_data = otp_store[phone_number]
-    
-    # Check if OTP has expired
-    if time.time() > stored_data["expiration"]:
-        # Remove expired OTP
-        del otp_store[phone_number]
-        return False
-    
-    # Check if too many attempts
-    if stored_data["attempts"] >= 3:  # Limit to 3 attempts
-        # Remove OTP after too many attempts
-        del otp_store[phone_number]
-        return False
-    
-    # Increment attempt counter
-    stored_data["attempts"] += 1
-    
-    # Check if OTP matches
-    if stored_data["otp"] == otp:
-        # OTP verified, remove it from store
-        del otp_store[phone_number]
+    # Check database first
+    user = await crud_user.get_by_phone(db, phone_number=phone_number)
+    if user and user.otp == otp:
+        # Clear the OTP after successful verification
+        await crud_user.update_otp(db, user=user, otp=None)
         return True
+    
+    # Fallback to in-memory store for testing
+    if phone_number in otp_store:
+        stored = otp_store[phone_number]
+        if stored["otp"] == otp and time.time() <= stored["expiration"]:
+            otp_store.pop(phone_number, None)  # Remove after successful verification
+            return True
     
     return False
 

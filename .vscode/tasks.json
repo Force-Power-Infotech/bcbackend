@@ -4,7 +4,7 @@
 		{
 			"type": "shell",
 			"label": "Delete and Restart Docker Setup",
-			"command": "docker-compose down && docker system prune -f && docker-compose up -d",
+			"command": "docker-compose down; if ($?) { docker system prune -f; if ($?) { docker-compose up -d } }",
 			"isBackground": false
 		}
 	]

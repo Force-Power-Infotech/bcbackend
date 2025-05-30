@@ -31,5 +31,8 @@ class Settings(BaseSettings):
     
     # CORS settings
     BACKEND_CORS_ORIGINS: list = ["*"]
+    
+    # OTP settings
+    OTP_EXPIRY_SECONDS: int = int(os.getenv("OTP_EXPIRY_SECONDS", "600"))  # 10 minutes default
 
 settings = Settings()
