@@ -1,0 +1,338 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Shots Analysis | BowlsAce Admin{% endblock %}
+
+{% block header %}Shot Analysis{% endblock %}
+
+{% block content %}
+<!-- Search and Filter -->
+<div class="admin-card mb-6">
+    <div class="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0">
+        <div class="flex">
+            <form action="{{ url_for('admin_shots') }}" method="GET" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700">User</label>
+                    <input type="text" name="user" id="user" value="{{ request.query_params.get('user', '') }}" 
+                           class="admin-input" placeholder="Username">
+                </div>
+                <div>
+                    <label for="shot_type" class="block text-sm font-medium text-gray-700">Shot Type</label>
+                    <select name="shot_type" id="shot_type" class="admin-input">
+                        <option value="">All Types</option>
+                        <option value="DRAW" {% if request.query_params.get('shot_type') == 'DRAW' %}selected{% endif %}>Draw</option>
+                        <option value="DRIVE" {% if request.query_params.get('shot_type') == 'DRIVE' %}selected{% endif %}>Drive</option>
+                        <option value="WEIGHTED" {% if request.query_params.get('shot_type') == 'WEIGHTED' %}selected{% endif %}>Weighted</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="min_accuracy" class="block text-sm font-medium text-gray-700">Min Accuracy</label>
+                    <input type="number" name="min_accuracy" id="min_accuracy" value="{{ request.query_params.get('min_accuracy', '') }}" 
+                           class="admin-input" min="0" max="10" placeholder="0-10">
+                </div>
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-700">Date From</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ request.query_params.get('date_from', '') }}" 
+                           class="admin-input">
+                </div>
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-gray-700">Date To</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ request.query_params.get('date_to', '') }}" 
+                           class="admin-input">
+                </div>
+                <div class="self-end">
+                    <button type="submit" class="admin-button admin-button-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Shot Analysis Overview -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="admin-card">
+        <h3 class="text-md font-medium text-gray-700 mb-2">Total Shots</h3>
+        <p class="text-3xl font-bold text-blue-600">{{ stats.total_shots }}</p>
+        <div class="mt-2 text-sm text-gray-500">From {{ stats.total_sessions }} practice sessions</div>
+    </div>
+    
+    <div class="admin-card">
+        <h3 class="text-md font-medium text-gray-700 mb-2">Average Accuracy</h3>
+        <p class="text-3xl font-bold text-green-600">{{ stats.avg_accuracy }}/10</p>
+        <div class="mt-2 text-sm text-gray-500">
+            {% if stats.accuracy_trend > 0 %}
+            <span class="text-green-600">↑ {{ stats.accuracy_trend }}% improvement</span>
+            {% elif stats.accuracy_trend < 0 %}
+            <span class="text-red-600">↓ {{ stats.accuracy_trend|abs }}% decline</span>
+            {% else %}
+            <span>No change</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="admin-card">
+        <h3 class="text-md font-medium text-gray-700 mb-2">Shot Type Distribution</h3>
+        <div class="flex items-center space-x-2">
+            <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                <div class="bg-blue-600 h-2.5 rounded-l-full" style="width: {{ stats.shot_types.draw_pct }}%"></div>
+            </div>
+            <span class="text-sm text-gray-700">{{ stats.shot_types.draw_pct }}%</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Draw Shots</div>
+        
+        <div class="flex items-center space-x-2 mt-3">
+            <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                <div class="bg-green-600 h-2.5 rounded-l-full" style="width: {{ stats.shot_types.drive_pct }}%"></div>
+            </div>
+            <span class="text-sm text-gray-700">{{ stats.shot_types.drive_pct }}%</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Drive Shots</div>
+        
+        <div class="flex items-center space-x-2 mt-3">
+            <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                <div class="bg-purple-600 h-2.5 rounded-l-full" style="width: {{ stats.shot_types.weighted_pct }}%"></div>
+            </div>
+            <span class="text-sm text-gray-700">{{ stats.shot_types.weighted_pct }}%</span>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Weighted Shots</div>
+    </div>
+</div>
+
+<!-- Shot Progression Chart -->
+<div class="admin-card mb-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Shot Accuracy Progression</h3>
+    <canvas id="shotProgressionChart" height="300"></canvas>
+</div>
+
+<!-- Shot Distribution Heatmap -->
+<div class="admin-card mb-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Shot Landing Distribution</h3>
+        <div>
+            <select id="heatmapShotType" class="admin-input py-1 px-2 text-sm" onchange="updateHeatmap()">
+                <option value="all">All Shot Types</option>
+                <option value="DRAW">Draw Shots</option>
+                <option value="DRIVE">Drive Shots</option>
+                <option value="WEIGHTED">Weighted Shots</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="relative mx-auto" style="width: 100%; max-width: 600px;">
+        <img src="{{ url_for('static', path='images/bowls_rink.png') }}" alt="Bowls Rink" class="w-full">
+        <canvas id="shotHeatmap" class="absolute top-0 left-0 w-full h-full"></canvas>
+    </div>
+    
+    <div class="mt-4 text-center text-sm text-gray-500">
+        This visualization shows where shots are landing on the rink. Brighter areas indicate higher concentration of shots.
+    </div>
+</div>
+
+<!-- Shots Table -->
+<div class="admin-card">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Shots</h3>
+    <div class="overflow-x-auto">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Session</th>
+                    <th>Type</th>
+                    <th>Accuracy</th>
+                    <th>Distance (m)</th>
+                    <th>Notes</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shot in shots %}
+                <tr>
+                    <td>{{ shot.id }}</td>
+                    <td>{{ shot.username }}</td>
+                    <td>
+                        <a href="{{ url_for('admin_session_detail', session_id=shot.session_id) }}" class="text-blue-600 hover:underline">
+                            {{ shot.session_title }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if shot.shot_type == 'DRAW' %}
+                        <span class="admin-badge admin-badge-blue">Draw</span>
+                        {% elif shot.shot_type == 'DRIVE' %}
+                        <span class="admin-badge admin-badge-red">Drive</span>
+                        {% elif shot.shot_type == 'WEIGHTED' %}
+                        <span class="admin-badge admin-badge-purple">Weighted</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center space-x-2">
+                            <div class="font-medium">{{ shot.accuracy_score }}</div>
+                            <div class="w-20 bg-gray-200 rounded-full h-2">
+                                <div 
+                                    class="h-2 rounded-full 
+                                        {% if shot.accuracy_score >= 8 %}
+                                        bg-green-500
+                                        {% elif shot.accuracy_score >= 5 %}
+                                        bg-yellow-500
+                                        {% else %}
+                                        bg-red-500
+                                        {% endif %}" 
+                                    style="width: {{ shot.accuracy_score * 10 }}%">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ shot.distance }}</td>
+                    <td class="max-w-xs">
+                        <div class="truncate">{{ shot.notes }}</div>
+                    </td>
+                    <td>{{ shot.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-between items-center">
+        <div class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ pagination.start }}</span> to 
+            <span class="font-medium">{{ pagination.end }}</span> of 
+            <span class="font-medium">{{ pagination.total }}</span> results
+        </div>
+        
+        <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if pagination.prev_page %}
+            <a href="{{ url_for('admin_shots', page=pagination.prev_page, user=request.query_params.get('user', ''), shot_type=request.query_params.get('shot_type', ''), min_accuracy=request.query_params.get('min_accuracy', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+
+            {% for page_num in pagination.page_range %}
+                {% if page_num == pagination.current_page %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                    {{ page_num }}
+                </span>
+                {% elif page_num == '...' %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    ...
+                </span>
+                {% else %}
+                <a href="{{ url_for('admin_shots', page=page_num, user=request.query_params.get('user', ''), shot_type=request.query_params.get('shot_type', ''), min_accuracy=request.query_params.get('min_accuracy', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    {{ page_num }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.next_page %}
+            <a href="{{ url_for('admin_shots', page=pagination.next_page, user=request.query_params.get('user', ''), shot_type=request.query_params.get('shot_type', ''), min_accuracy=request.query_params.get('min_accuracy', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+<script>
+    // Shot Progression Chart
+    const ctx = document.getElementById('shotProgressionChart').getContext('2d');
+    const shotProgressionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.progression.labels | tojson }},
+            datasets: [
+                {
+                    label: 'Draw Shots',
+                    data: {{ chart_data.progression.draw | tojson }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                },
+                {
+                    label: 'Drive Shots',
+                    data: {{ chart_data.progression.drive | tojson }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                },
+                {
+                    label: 'Weighted Shots',
+                    data: {{ chart_data.progression.weighted | tojson }},
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)', 
+                    borderWidth: 2,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: {
+                        display: true,
+                        text: 'Average Accuracy Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+
+    // Heatmap for shot distribution
+    // Initialize heatmap instance
+    const heatmapContainer = document.getElementById('shotHeatmap');
+    const heatmapInstance = h337.create({
+        container: heatmapContainer,
+        radius: 15,
+        maxOpacity: .8,
+        minOpacity: 0,
+        blur: .75
+    });
+
+    // Global shot data from server
+    const shotData = {
+        all: {{ heatmap_data.all | tojson }},
+        DRAW: {{ heatmap_data.draw | tojson }},
+        DRIVE: {{ heatmap_data.drive | tojson }},
+        WEIGHTED: {{ heatmap_data.weighted | tojson }}
+    };
+
+    // Function to update heatmap based on selected shot type
+    function updateHeatmap() {
+        const shotType = document.getElementById('heatmapShotType').value;
+        heatmapInstance.setData({
+            max: 10,
+            data: shotData[shotType]
+        });
+    }
+
+    // Initialize with all shot types
+    updateHeatmap();
+</script>
+{% endblock %}

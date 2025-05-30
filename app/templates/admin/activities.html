@@ -1,0 +1,243 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Activity Log | BowlsAce Admin{% endblock %}
+
+{% block header %}Activity Log{% endblock %}
+
+{% block content %}
+<!-- Search and Filter -->
+<div class="admin-card mb-6">
+    <div class="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0">
+        <div class="flex">
+            <form action="{{ url_for('admin_activities') }}" method="GET" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                <div>
+                    <label for="user" class="block text-sm font-medium text-gray-700">User</label>
+                    <input type="text" name="user" id="user" value="{{ request.query_params.get('user', '') }}" 
+                           class="admin-input" placeholder="Username">
+                </div>
+                <div>
+                    <label for="action_type" class="block text-sm font-medium text-gray-700">Activity Type</label>
+                    <select name="action_type" id="action_type" class="admin-input">
+                        <option value="">All Activities</option>
+                        <option value="LOGIN" {% if request.query_params.get('action_type') == 'LOGIN' %}selected{% endif %}>Login</option>
+                        <option value="LOGOUT" {% if request.query_params.get('action_type') == 'LOGOUT' %}selected{% endif %}>Logout</option>
+                        <option value="REGISTRATION" {% if request.query_params.get('action_type') == 'REGISTRATION' %}selected{% endif %}>Registration</option>
+                        <option value="SESSION_CREATE" {% if request.query_params.get('action_type') == 'SESSION_CREATE' %}selected{% endif %}>Session Create</option>
+                        <option value="CHALLENGE_CREATE" {% if request.query_params.get('action_type') == 'CHALLENGE_CREATE' %}selected{% endif %}>Challenge Create</option>
+                        <option value="CHALLENGE_RESPONSE" {% if request.query_params.get('action_type') == 'CHALLENGE_RESPONSE' %}selected{% endif %}>Challenge Response</option>
+                        <option value="PROFILE_UPDATE" {% if request.query_params.get('action_type') == 'PROFILE_UPDATE' %}selected{% endif %}>Profile Update</option>
+                        <option value="PASSWORD_RESET" {% if request.query_params.get('action_type') == 'PASSWORD_RESET' %}selected{% endif %}>Password Reset</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-700">Date From</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ request.query_params.get('date_from', '') }}" 
+                           class="admin-input">
+                </div>
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-gray-700">Date To</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ request.query_params.get('date_to', '') }}" 
+                           class="admin-input">
+                </div>
+                <div class="self-end">
+                    <button type="submit" class="admin-button admin-button-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+        <div class="self-end">
+            <a href="{{ url_for('admin_export_activity_log') }}" class="admin-button bg-gray-600 text-white hover:bg-gray-700">
+                Export Log
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Log -->
+<div class="admin-card">
+    <div class="overflow-x-auto">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Activity Type</th>
+                    <th>Description</th>
+                    <th>IP Address</th>
+                    <th>Date & Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in activities %}
+                <tr>
+                    <td>{{ activity.id }}</td>
+                    <td>
+                        {% if activity.user %}
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center text-white mr-3">
+                                {{ activity.username[0].upper() }}
+                            </div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ activity.username }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <span class="text-gray-500">Guest</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if activity.action_type == 'LOGIN' %}
+                        <span class="admin-badge admin-badge-blue">Login</span>
+                        {% elif activity.action_type == 'LOGOUT' %}
+                        <span class="admin-badge admin-badge-gray">Logout</span>
+                        {% elif activity.action_type == 'REGISTRATION' %}
+                        <span class="admin-badge admin-badge-green">Registration</span>
+                        {% elif activity.action_type == 'SESSION_CREATE' %}
+                        <span class="admin-badge admin-badge-purple">Practice Session</span>
+                        {% elif activity.action_type == 'CHALLENGE_CREATE' %}
+                        <span class="admin-badge admin-badge-yellow">Challenge</span>
+                        {% elif activity.action_type == 'CHALLENGE_RESPONSE' %}
+                        <span class="admin-badge admin-badge-yellow">Challenge Response</span>
+                        {% elif activity.action_type == 'PROFILE_UPDATE' %}
+                        <span class="admin-badge admin-badge-blue">Profile Update</span>
+                        {% elif activity.action_type == 'PASSWORD_RESET' %}
+                        <span class="admin-badge admin-badge-red">Password Reset</span>
+                        {% endif %}
+                    </td>
+                    <td class="max-w-xs">
+                        <div class="truncate">{{ activity.description }}</div>
+                    </td>
+                    <td>{{ activity.ip_address }}</td>
+                    <td>{{ activity.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {% if activity.status == 'SUCCESS' %}
+                        <span class="admin-badge admin-badge-green">Success</span>
+                        {% elif activity.status == 'FAILED' %}
+                        <span class="admin-badge admin-badge-red">Failed</span>
+                        {% elif activity.status == 'PENDING' %}
+                        <span class="admin-badge admin-badge-yellow">Pending</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-between items-center">
+        <div class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ pagination.start }}</span> to 
+            <span class="font-medium">{{ pagination.end }}</span> of 
+            <span class="font-medium">{{ pagination.total }}</span> results
+        </div>
+        
+        <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if pagination.prev_page %}
+            <a href="{{ url_for('admin_activities', page=pagination.prev_page, user=request.query_params.get('user', ''), action_type=request.query_params.get('action_type', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+
+            {% for page_num in pagination.page_range %}
+                {% if page_num == pagination.current_page %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                    {{ page_num }}
+                </span>
+                {% elif page_num == '...' %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    ...
+                </span>
+                {% else %}
+                <a href="{{ url_for('admin_activities', page=page_num, user=request.query_params.get('user', ''), action_type=request.query_params.get('action_type', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    {{ page_num }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.next_page %}
+            <a href="{{ url_for('admin_activities', page=pagination.next_page, user=request.query_params.get('user', ''), action_type=request.query_params.get('action_type', ''), date_from=request.query_params.get('date_from', ''), date_to=request.query_params.get('date_to', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+
+<!-- Activity Trends -->
+<div class="admin-card mt-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Activity Trends</h3>
+    <canvas id="activityTrendsChart" height="300"></canvas>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Activity Trends Chart
+    const ctx = document.getElementById('activityTrendsChart').getContext('2d');
+    const activityTrendsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ trends.labels | tojson }},
+            datasets: [
+                {
+                    label: 'Logins',
+                    data: {{ trends.logins | tojson }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                },
+                {
+                    label: 'Practice Sessions',
+                    data: {{ trends.sessions | tojson }},
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                },
+                {
+                    label: 'Challenges',
+                    data: {{ trends.challenges | tojson }},
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 2,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Activities'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

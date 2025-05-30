@@ -1,0 +1,200 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Dashboard | BowlsAce Admin{% endblock %}
+
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Total Users Card -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900">Users</h3>
+        <div class="mt-2 flex items-baseline">
+            <p class="text-3xl font-semibold text-gray-900">{{ stats.total_users }}</p>
+            <p class="ml-2 text-sm font-medium text-green-600">
+                +{{ stats.new_users_today }} today
+            </p>
+        </div>
+        <div class="mt-4">
+            <a href="{{ url_for('admin_users') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                View all users →
+            </a>
+        </div>
+    </div>
+
+    <!-- Practice Sessions Card -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900">Sessions</h3>
+        <div class="mt-2 flex items-baseline">
+            <p class="text-3xl font-semibold text-gray-900">{{ stats.total_sessions }}</p>
+            <p class="ml-2 text-sm font-medium text-green-600">
+                +{{ stats.new_sessions_today }} today
+            </p>
+        </div>
+        <div class="mt-4">
+            <a href="{{ url_for('admin_sessions') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                View all sessions →
+            </a>
+        </div>
+    </div>
+
+    <!-- Shots Card -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900">Total Shots</h3>
+        <div class="mt-2 flex items-baseline">
+            <p class="text-3xl font-semibold text-gray-900">{{ stats.total_shots }}</p>
+            <p class="ml-2 text-sm font-medium text-green-600">
+                +{{ stats.new_shots_today }} today
+            </p>
+        </div>
+        <div class="mt-4">
+            <a href="{{ url_for('admin_shots') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                View shot analytics →
+            </a>
+        </div>
+    </div>
+
+    <!-- Challenges Card -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900">Active Challenges</h3>
+        <div class="mt-2 flex items-baseline">
+            <p class="text-3xl font-semibold text-gray-900">{{ stats.active_challenges }}</p>
+            <p class="ml-2 text-sm font-medium text-blue-600">
+                {{ stats.completed_challenges_today }} completed today
+            </p>
+        </div>
+        <div class="mt-4">
+            <a href="{{ url_for('admin_challenges') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                View challenges →
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <!-- User Growth Chart -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">User Registration History</h3>
+        <canvas id="userGrowthChart" height="300"></canvas>
+    </div>
+    
+    <!-- Shot Performance Chart -->
+    <div class="admin-card">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Shot Performance by Type</h3>
+        <canvas id="shotPerformanceChart" height="300"></canvas>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="admin-card mt-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Recent Activities</h3>
+        <a href="{{ url_for('admin_activities') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+            View all activities →
+        </a>
+    </div>
+    <div class="overflow-hidden">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Activity</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in recent_activities %}
+                <tr>
+                    <td class="whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-gray-400 flex items-center justify-center text-white mr-3">
+                                {{ activity.username[0].upper() }}
+                            </div>
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ activity.username }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-sm text-gray-900">{{ activity.action }}</div>
+                        <div class="text-xs text-gray-500">{{ activity.description }}</div>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ activity.time_ago }}</div>
+                    </td>
+                    <td>
+                        <span class="admin-badge {{ activity.status_class }}">
+                            {{ activity.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // User Growth Chart
+    const userCtx = document.getElementById('userGrowthChart').getContext('2d');
+    const userGrowthChart = new Chart(userCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.user_growth.labels | tojson }},
+            datasets: [{
+                label: 'New Users',
+                data: {{ chart_data.user_growth.data | tojson }},
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Shot Performance Chart
+    const shotCtx = document.getElementById('shotPerformanceChart').getContext('2d');
+    const shotPerformanceChart = new Chart(shotCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.shot_performance.labels | tojson }},
+            datasets: [{
+                label: 'Average Accuracy',
+                data: {{ chart_data.shot_performance.data | tojson }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

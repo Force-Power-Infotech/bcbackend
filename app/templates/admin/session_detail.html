@@ -1,0 +1,252 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Session Details | BowlsAce Admin{% endblock %}
+
+{% block header %}
+Session Details <span class="text-gray-400 font-normal">#{{ session.id }}</span>
+{% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div class="mb-6">
+    <a href="/admin/sessions" class="btn-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back to Sessions
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Session Information -->
+    <div class="lg:col-span-1">
+        <div class="admin-card mb-6">
+            <h3 class="text-lg font-semibold mb-4">Session Information</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">User:</span>
+                    <a href="/admin/users/{{ user.id }}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                        {{ user.username }}
+                    </a>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Date:</span>
+                    <span>{{ session.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Duration:</span>
+                    <span>{{ (session.duration / 60)|round|int }} minutes</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Drill Type:</span>
+                    <span>{{ session.drill_type or 'Custom Practice' }}</span>
+                </div>
+                {% if drill %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Drill:</span>
+                    <a href="/admin/drills/{{ drill.id }}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                        {{ drill.name }}
+                    </a>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Score:</span>
+                    <span class="font-semibold">{{ session.score }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Total Shots:</span>
+                    <span>{{ shots|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Location:</span>
+                    <span>{{ session.location or 'Not specified' }}</span>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Metrics -->
+            {% if session.metrics %}
+            <h4 class="text-md font-semibold mb-2">Performance Metrics</h4>
+            <div class="space-y-2">
+                {% set metrics = session.metrics|tojson|fromjson %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Success Rate:</span>
+                    <span>{{ metrics.get('success_rate', 0)|round(1) }}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Accuracy:</span>
+                    <span>{{ metrics.get('accuracy', 0)|round(1) }}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Consistency:</span>
+                    <span>{{ metrics.get('consistency', 0)|round(1) }}%</span>
+                </div>
+                {% if metrics.get('average_distance_from_target') is not none %}
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Avg. Distance (cm):</span>
+                    <span>{{ metrics.get('average_distance_from_target', 0)|round(1) }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="mt-5 flex justify-between">
+                <button 
+                    class="btn-danger"
+                    onclick="confirmDeleteSession({{ session.id }}, '{{ session.created_at.strftime('%Y-%m-%d %H:%M') }}')"
+                >
+                    Delete Session
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shots Visualization -->
+    <div class="lg:col-span-2">
+        <div class="admin-card mb-6">
+            <h3 class="text-lg font-semibold mb-4">Rink Visualization</h3>
+            <div class="bg-green-100 h-96 relative rounded-md border border-green-300" id="rinkVisualization">
+                <!-- Jack -->
+                <div class="absolute w-4 h-4 bg-white rounded-full border-2 border-white shadow-md" style="left: 50%; top: 12%; transform: translate(-50%, -50%);" id="jack"></div>
+                
+                <!-- Target zone -->
+                <div class="absolute w-24 h-24 rounded-full border-2 border-dashed border-gray-400 opacity-50" style="left: 50%; top: 12%; transform: translate(-50%, -50%);" id="targetZone"></div>
+                
+                <!-- Shots will be dynamically added here with JavaScript -->
+                {% for shot in shots %}
+                    <div 
+                        class="absolute w-3 h-3 rounded-full shot-marker {% if shot.successful %}bg-green-500{% else %}bg-red-500{% endif %}" 
+                        data-shot-id="{{ shot.id }}"
+                        data-distance="{{ shot.distance_from_target }}"
+                        style="left: {{ 50 + shot.x_position }}%; top: {{ 12 + shot.y_position }}%; transform: translate(-50%, -50%);"
+                        title="Shot #{{ loop.index }}: {{ 'Success' if shot.successful else 'Miss' }} ({{ shot.distance_from_target }}cm)"
+                    ></div>
+                {% endfor %}
+            </div>
+            <div class="mt-4 text-sm text-gray-500 text-center">
+                <p>Distance measurements in centimeters. Hover over shots for details.</p>
+                <div class="flex justify-center space-x-6 mt-2">
+                    <div class="flex items-center">
+                        <span class="inline-block w-3 h-3 bg-white rounded-full border border-gray-400 mr-1"></span>
+                        <span>Jack</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-3 h-3 bg-green-500 rounded-full mr-1"></span>
+                        <span>Successful Shots</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-3 h-3 bg-red-500 rounded-full mr-1"></span>
+                        <span>Missed Shots</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shot Details -->
+        <div class="admin-card mb-6">
+            <h3 class="text-lg font-semibold mb-4">Shot History</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="text-left p-2">#</th>
+                            <th class="text-left p-2">Time</th>
+                            <th class="text-left p-2">Type</th>
+                            <th class="text-left p-2">Distance (cm)</th>
+                            <th class="text-left p-2">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shot in shots %}
+                        <tr class="border-t hover:bg-gray-50">
+                            <td class="p-2">{{ loop.index }}</td>
+                            <td class="p-2">{{ shot.created_at.strftime('%H:%M:%S') }}</td>
+                            <td class="p-2">{{ shot.shot_type }}</td>
+                            <td class="p-2">{{ shot.distance_from_target }}</td>
+                            <td class="p-2">
+                                {% if shot.successful %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Success</span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Miss</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Session Modal -->
+<div id="deleteSessionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full">
+        <h3 class="text-lg font-semibold mb-4">Confirm Deletion</h3>
+        <p>Are you sure you want to delete the practice session from <span id="deleteSessionName" class="font-medium"></span>?</p>
+        <p class="text-sm text-gray-500 mt-1">This action cannot be undone and will delete all associated shot data.</p>
+        <div class="mt-6 flex justify-end space-x-3">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('deleteSessionModal').classList.add('hidden')">
+                Cancel
+            </button>
+            <form id="deleteSessionForm" method="POST" action="">
+                <button type="submit" class="btn-danger">
+                    Delete Session
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function confirmDeleteSession(sessionId, sessionTitle) {
+        const form = document.getElementById('deleteSessionForm');
+        form.action = "/admin/sessions/" + sessionId + "/delete";
+        
+        document.getElementById('deleteSessionName').textContent = sessionTitle;
+        document.getElementById('deleteSessionModal').classList.remove('hidden');
+    }
+    
+    // Add interactive functionality for the rink visualization
+    document.addEventListener('DOMContentLoaded', function() {
+        const shotMarkers = document.querySelectorAll('.shot-marker');
+        
+        // Add hover effects for shots
+        shotMarkers.forEach(marker => {
+            marker.addEventListener('mouseenter', function() {
+                this.style.zIndex = 10;
+                this.style.width = '10px';
+                this.style.height = '10px';
+                
+                // Add shot details popup
+                const shotId = this.getAttribute('data-shot-id');
+                const distance = this.getAttribute('data-distance');
+                const isSuccess = this.classList.contains('bg-green-500');
+                
+                const popup = document.createElement('div');
+                popup.className = 'shot-popup absolute bg-gray-800 text-white p-2 text-xs rounded z-20';
+                popup.innerHTML = `Shot #${shotId}<br>Distance: ${distance}cm<br>Result: ${isSuccess ? 'Success' : 'Miss'}`;
+                popup.style.left = '100%';
+                popup.style.top = '0';
+                
+                this.appendChild(popup);
+            });
+            
+            marker.addEventListener('mouseleave', function() {
+                this.style.zIndex = 1;
+                this.style.width = '6px';
+                this.style.height = '6px';
+                
+                // Remove popup
+                const popup = this.querySelector('.shot-popup');
+                if (popup) {
+                    this.removeChild(popup);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

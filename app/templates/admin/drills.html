@@ -1,0 +1,313 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Drills | BowlsAce Admin{% endblock %}
+
+{% block header %}Drills Management{% endblock %}
+
+{% block content %}
+<!-- Search and Filter -->
+<div class="admin-card mb-6">
+    <div class="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0">
+        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+            <form action="{{ url_for('admin_drills') }}" method="GET" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                    <input type="text" name="search" id="search" value="{{ request.query_params.get('search', '') }}" 
+                           class="admin-input" placeholder="Drill name or description">
+                </div>
+                <div>
+                    <label for="difficulty" class="block text-sm font-medium text-gray-700">Difficulty</label>
+                    <select name="difficulty" id="difficulty" class="admin-input">
+                        <option value="">All Difficulties</option>
+                        <option value="BEGINNER" {% if request.query_params.get('difficulty') == 'BEGINNER' %}selected{% endif %}>Beginner</option>
+                        <option value="INTERMEDIATE" {% if request.query_params.get('difficulty') == 'INTERMEDIATE' %}selected{% endif %}>Intermediate</option>
+                        <option value="ADVANCED" {% if request.query_params.get('difficulty') == 'ADVANCED' %}selected{% endif %}>Advanced</option>
+                    </select>
+                </div>
+                <div class="self-end">
+                    <button type="submit" class="admin-button admin-button-primary">Filter</button>
+                </div>
+            </form>
+        </div>
+        <div class="self-end">
+            <button type="button" onclick="showCreateDrillModal()" class="admin-button admin-button-success">
+                Create Drill
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Drills Table -->
+<div class="admin-card">
+    <div class="overflow-x-auto">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Difficulty</th>
+                    <th>Duration (min)</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for drill in drills %}
+                <tr>
+                    <td>{{ drill.id }}</td>
+                    <td>{{ drill.name }}</td>
+                    <td>{{ drill.drill_type }}</td>
+                    <td>
+                        {% if drill.difficulty == 'BEGINNER' %}
+                        <span class="admin-badge admin-badge-green">Beginner</span>
+                        {% elif drill.difficulty == 'INTERMEDIATE' %}
+                        <span class="admin-badge admin-badge-blue">Intermediate</span>
+                        {% elif drill.difficulty == 'ADVANCED' %}
+                        <span class="admin-badge admin-badge-red">Advanced</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ drill.duration_minutes }}</td>
+                    <td class="max-w-md">
+                        <div class="truncate">{{ drill.description }}</div>
+                    </td>
+                    <td>{{ drill.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="whitespace-nowrap">
+                        <div class="flex space-x-2">
+                            <button onclick="showEditDrillModal('{{ drill.id }}', '{{ drill.name }}', '{{ drill.drill_type }}', '{{ drill.difficulty }}', {{ drill.duration_minutes }}, '{{ drill.description }}')" class="text-blue-600 hover:text-blue-900">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button class="text-red-600 hover:text-red-900" 
+                                    onclick="confirmDeleteDrill('{{ drill.id }}', '{{ drill.name }}')">
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-between items-center">
+        <div class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ pagination.start }}</span> to 
+            <span class="font-medium">{{ pagination.end }}</span> of 
+            <span class="font-medium">{{ pagination.total }}</span> results
+        </div>
+        
+        <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if pagination.prev_page %}
+            <a href="{{ url_for('admin_drills', page=pagination.prev_page, search=request.query_params.get('search', ''), difficulty=request.query_params.get('difficulty', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+
+            {% for page_num in pagination.page_range %}
+                {% if page_num == pagination.current_page %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                    {{ page_num }}
+                </span>
+                {% elif page_num == '...' %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    ...
+                </span>
+                {% else %}
+                <a href="{{ url_for('admin_drills', page=page_num, search=request.query_params.get('search', ''), difficulty=request.query_params.get('difficulty', '')) }}" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    {{ page_num }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.next_page %}
+            <a href="{{ url_for('admin_drills', page=pagination.next_page, search=request.query_params.get('search', ''), difficulty=request.query_params.get('difficulty', '')) }}" 
+               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+
+<!-- Create Drill Modal -->
+<div id="createDrillModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Create Drill</h3>
+            <button type="button" onclick="document.getElementById('createDrillModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form action="{{ url_for('admin_create_drill') }}" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="name" required class="admin-input mt-1" placeholder="Drill name">
+                </div>
+                <div>
+                    <label for="drill_type" class="block text-sm font-medium text-gray-700">Type</label>
+                    <select name="drill_type" id="drill_type" required class="admin-input mt-1">
+                        <option value="DRAW">Draw Shot</option>
+                        <option value="DRIVE">Drive Shot</option>
+                        <option value="WEIGHT_CONTROL">Weight Control</option>
+                        <option value="POSITION">Position Play</option>
+                        <option value="MIXED">Mixed Skills</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="difficulty" class="block text-sm font-medium text-gray-700">Difficulty</label>
+                    <select name="difficulty" id="create_difficulty" required class="admin-input mt-1">
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="duration_minutes" class="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+                    <input type="number" name="duration_minutes" id="duration_minutes" required class="admin-input mt-1" min="5" max="120" value="30">
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" id="description" rows="4" required class="admin-input mt-1" placeholder="Detailed drill description..."></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('createDrillModal').classList.add('hidden')" class="admin-button bg-gray-200 text-gray-700 hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" class="admin-button admin-button-success">
+                    Create
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Drill Modal -->
+<div id="editDrillModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Edit Drill</h3>
+            <button type="button" onclick="document.getElementById('editDrillModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form id="editDrillForm" action="" method="POST">
+            <div class="space-y-4">
+                <div>
+                    <label for="edit_name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="edit_name" required class="admin-input mt-1" placeholder="Drill name">
+                </div>
+                <div>
+                    <label for="edit_drill_type" class="block text-sm font-medium text-gray-700">Type</label>
+                    <select name="drill_type" id="edit_drill_type" required class="admin-input mt-1">
+                        <option value="DRAW">Draw Shot</option>
+                        <option value="DRIVE">Drive Shot</option>
+                        <option value="WEIGHT_CONTROL">Weight Control</option>
+                        <option value="POSITION">Position Play</option>
+                        <option value="MIXED">Mixed Skills</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="edit_difficulty" class="block text-sm font-medium text-gray-700">Difficulty</label>
+                    <select name="difficulty" id="edit_difficulty" required class="admin-input mt-1">
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="edit_duration_minutes" class="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+                    <input type="number" name="duration_minutes" id="edit_duration_minutes" required class="admin-input mt-1" min="5" max="120">
+                </div>
+                <div>
+                    <label for="edit_description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" id="edit_description" rows="4" required class="admin-input mt-1" placeholder="Detailed drill description..."></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('editDrillModal').classList.add('hidden')" class="admin-button bg-gray-200 text-gray-700 hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" class="admin-button admin-button-primary">
+                    Update
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteDrillModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Delete Drill</h3>
+            <button type="button" onclick="document.getElementById('deleteDrillModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <p class="text-sm text-gray-500">
+            Are you sure you want to delete drill <span id="deleteDrillName" class="font-medium"></span>? This action cannot be undone.
+        </p>
+        <div class="mt-6 flex justify-end space-x-3">
+            <button type="button" onclick="document.getElementById('deleteDrillModal').classList.add('hidden')" class="admin-button bg-gray-200 text-gray-700 hover:bg-gray-300">
+                Cancel
+            </button>
+            <form id="deleteDrillForm" action="" method="POST">
+                <button type="submit" class="admin-button admin-button-danger">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showCreateDrillModal() {
+        document.getElementById('createDrillModal').classList.remove('hidden');
+    }
+    
+    function showEditDrillModal(id, name, type, difficulty, duration, description) {
+        const form = document.getElementById('editDrillForm');
+        form.action = "/admin/drills/" + id + "/edit";
+        
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_drill_type').value = type;
+        document.getElementById('edit_difficulty').value = difficulty;
+        document.getElementById('edit_duration_minutes').value = duration;
+        document.getElementById('edit_description').value = description;
+        
+        document.getElementById('editDrillModal').classList.remove('hidden');
+    }
+    
+    function confirmDeleteDrill(drillId, drillName) {
+        const form = document.getElementById('deleteDrillForm');
+        form.action = "/admin/drills/" + drillId + "/delete";
+        
+        document.getElementById('deleteDrillName').textContent = drillName;
+        document.getElementById('deleteDrillModal').classList.remove('hidden');
+    }
+</script>
+{% endblock %}
