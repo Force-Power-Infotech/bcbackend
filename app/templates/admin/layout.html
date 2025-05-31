@@ -10,13 +10,16 @@
     <style type="text/tailwindcss">
         @layer components {
             .admin-sidebar {
-                @apply fixed inset-y-0 left-0 w-64 bg-gray-800 flex flex-col p-4;
+                @apply fixed inset-y-0 left-0 z-20 w-64 transition-transform duration-300 bg-gradient-to-b from-blue-800 to-gray-900 flex flex-col p-4 text-white shadow-xl;
+            }
+            .admin-sidebar.mobile-hidden {
+                @apply -translate-x-full md:translate-x-0;
             }
             .admin-content {
-                @apply flex-1 ml-64 min-h-screen;
+                @apply flex-1 md:ml-64 min-h-screen transition-all duration-300;
             }
             .admin-card {
-                @apply bg-white overflow-hidden shadow-sm rounded-lg p-6;
+                @apply bg-white overflow-hidden rounded-xl p-6 shadow-lg hover:shadow-xl transition duration-300 border border-gray-100;
             }
             .admin-table {
                 @apply min-w-full divide-y divide-gray-200;
@@ -30,25 +33,60 @@
             .admin-badge {
                 @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
             }
-            .admin-badge-success {
+            .admin-badge-blue {
+                @apply bg-blue-100 text-blue-800;
+            }
+            .admin-badge-green {
                 @apply bg-green-100 text-green-800;
             }
-            .admin-badge-warning {
+            .admin-badge-yellow {
                 @apply bg-yellow-100 text-yellow-800;
             }
-            .admin-badge-error {
+            .admin-badge-red {
                 @apply bg-red-100 text-red-800;
+            }
+            .admin-badge-gray {
+                @apply bg-gray-100 text-gray-800;
+            }
+            .admin-badge-purple {
+                @apply bg-purple-100 text-purple-800;
+            }
+            .admin-button {
+                @apply px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+            }
+            .admin-button-primary {
+                @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+            }
+            .admin-button-success {
+                @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+            }
+            .admin-input {
+                @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500;
             }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100">
-    <div class="flex">
+<body class="bg-gray-50">
+    <div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden">
+        <!-- Mobile sidebar toggle -->
+        <div class="fixed top-0 left-0 z-30 p-4 md:hidden">
+            <button @click="sidebarOpen = !sidebarOpen" class="text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+        </div>
+        
         <!-- Sidebar -->
-        <aside class="admin-sidebar">
-            <div class="flex items-center mb-6">
+        <aside x-bind:class="{'mobile-hidden': !sidebarOpen}" class="admin-sidebar mobile-hidden">
+            <div class="flex items-center justify-between mb-6">
                 <h1 class="text-xl font-bold">BowlsAce Admin</h1>
+                <button @click="sidebarOpen = false" class="md:hidden text-white focus:outline-none">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
             
             <nav class="mt-8">
@@ -93,9 +131,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         Metrics
+                    </a>                    <a href="{{ url_for('admin_api_status') }}" class="flex items-center px-2 py-2 text-sm font-medium rounded-md {% if '/admin/api-status' in request.path %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">
+                        <svg class="mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                        </svg>
+                        API Status
                     </a>
 
-                    <a href="{{ url_for('admin_settings') }}" class="flex items-center px-2 py-2 text-sm font-medium rounded-md {% if '/admin/settings' in request.path %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">
+                    <a href="{{ url_for('admin_settings') if 'admin_settings' in request.app.router.routes_by_name else '/admin/settings' }}" class="flex items-center px-2 py-2 text-sm font-medium rounded-md {% if '/admin/settings' in request.path %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">
                         <svg class="mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

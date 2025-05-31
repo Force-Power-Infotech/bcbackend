@@ -5,84 +5,229 @@
 {% block header %}Drills Management{% endblock %}
 
 {% block content %}
+<!-- Notification Messages -->
+{% if error_message %}
+<div class="relative mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg shadow-sm" role="alert">
+    <div class="flex items-center">
+        <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <strong class="text-red-600 font-medium">Error:</strong>
+        <span class="ml-2 text-red-700">
+            {% if error_message == "create_failed" %}Failed to create drill. Please try again.
+            {% elif error_message == "update_failed" %}Failed to update drill. Please try again.
+            {% elif error_message == "delete_failed" %}Failed to delete drill. Please try again.
+            {% elif error_message == "drill_not_found" %}Drill not found. It may have been deleted already.
+            {% else %}{{ error_message }}{% endif %}
+        </span>
+        <button type="button" class="close-alert absolute top-2 right-2 text-red-600 hover:text-red-800 focus:outline-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+{% endif %}
+
+{% if success_message %}
+<div class="relative mb-6 px-4 py-3 bg-green-50 border border-green-200 rounded-lg shadow-sm" role="alert">
+    <div class="flex items-center">
+        <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <strong class="text-green-600 font-medium">Success:</strong>
+        <span class="ml-2 text-green-700">
+            {% if success_message == "created" %}Drill created successfully.
+            {% elif success_message == "updated" %}Drill updated successfully.
+            {% elif success_message == "deleted" %}Drill deleted successfully.
+            {% else %}{{ success_message }}{% endif %}
+        </span>
+        <button type="button" class="close-alert absolute top-2 right-2 text-green-600 hover:text-green-800 focus:outline-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+{% endif %}
+
 <!-- Search and Filter -->
-<div class="admin-card mb-6">
+<div class="admin-card mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
     <div class="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0">
-        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-            <form action="{{ url_for('admin_drills') }}" method="GET" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-                <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
-                    <input type="text" name="search" id="search" value="{{ request.query_params.get('search', '') }}" 
-                           class="admin-input" placeholder="Drill name or description">
+        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 w-full lg:w-3/4">
+            <form action="{{ url_for('admin_drills') }}" method="GET" class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 w-full">
+                <div class="w-full md:w-2/5">
+                    <label for="search" class="block text-sm font-medium text-gray-700">Search Drills</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input type="text" name="search" id="search" value="{{ request.query_params.get('search', '') }}" 
+                               class="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" 
+                               placeholder="Search by name or description">
+                    </div>
                 </div>
-                <div>
-                    <label for="difficulty" class="block text-sm font-medium text-gray-700">Difficulty</label>
-                    <select name="difficulty" id="difficulty" class="admin-input">
-                        <option value="">All Difficulties</option>
-                        <option value="BEGINNER" {% if request.query_params.get('difficulty') == 'BEGINNER' %}selected{% endif %}>Beginner</option>
-                        <option value="INTERMEDIATE" {% if request.query_params.get('difficulty') == 'INTERMEDIATE' %}selected{% endif %}>Intermediate</option>
-                        <option value="ADVANCED" {% if request.query_params.get('difficulty') == 'ADVANCED' %}selected{% endif %}>Advanced</option>
-                    </select>
+                <div class="w-full md:w-1/3">
+                    <label for="difficulty" class="block text-sm font-medium text-gray-700">Difficulty Level</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <select name="difficulty" id="difficulty" 
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 pl-3 pr-10 py-2">
+                            <option value="">All Difficulty Levels</option>
+                            <option value="BEGINNER" {% if request.query_params.get('difficulty') == 'BEGINNER' %}selected{% endif %}>Beginner</option>
+                            <option value="INTERMEDIATE" {% if request.query_params.get('difficulty') == 'INTERMEDIATE' %}selected{% endif %}>Intermediate</option>
+                            <option value="ADVANCED" {% if request.query_params.get('difficulty') == 'ADVANCED' %}selected{% endif %}>Advanced</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="self-end">
-                    <button type="submit" class="admin-button admin-button-primary">Filter</button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105">
+                        <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Filter
+                    </button>
                 </div>
             </form>
         </div>
         <div class="self-end">
-            <button type="button" onclick="showCreateDrillModal()" class="admin-button admin-button-success">
-                Create Drill
+            <button type="button" onclick="showCreateDrillModal()" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create New Drill
             </button>
         </div>
     </div>
 </div>
 
 <!-- Drills Table -->
-<div class="admin-card">
-    <div class="overflow-x-auto">
-        <table class="admin-table">
-            <thead>
+<div class="admin-card shadow-lg rounded-xl border border-gray-100">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+        <svg class="h-6 w-6 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        Available Drills
+        <span class="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{{ drills|length }}</span>
+    </h3>
+    
+    <div class="overflow-x-auto rounded-lg shadow">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
                 <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Difficulty</th>
-                    <th>Duration (min)</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">ID</th>
+                    <th scope="col" class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difficulty</th>
+                    <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                    <th scope="col" class="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th scope="col" class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="bg-white divide-y divide-gray-200">
                 {% for drill in drills %}
-                <tr>
-                    <td>{{ drill.id }}</td>
-                    <td>{{ drill.name }}</td>
-                    <td>{{ drill.drill_type }}</td>
-                    <td>
-                        {% if drill.difficulty == 'BEGINNER' %}
-                        <span class="admin-badge admin-badge-green">Beginner</span>
-                        {% elif drill.difficulty == 'INTERMEDIATE' %}
-                        <span class="admin-badge admin-badge-blue">Intermediate</span>
-                        {% elif drill.difficulty == 'ADVANCED' %}
-                        <span class="admin-badge admin-badge-red">Advanced</span>
+                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{{ drill.id }}</td>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 text-sm font-medium text-gray-900">
+                        <div class="flex flex-col">
+                            <span>{{ drill.name }}</span>
+                            <!-- Mobile-only info -->
+                            <div class="sm:hidden flex flex-wrap gap-2 mt-2">
+                                <!-- Type badge for mobile -->
+                                {% if drill.drill_type == 'DRAW' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Draw</span>
+                                {% elif drill.drill_type == 'DRIVE' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Drive</span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ drill.drill_type }}</span>
+                                {% endif %}
+                                
+                                <!-- Difficulty badge for mobile -->
+                                {% if drill.difficulty == 'BEGINNER' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Beginner</span>
+                                {% elif drill.difficulty == 'INTERMEDIATE' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Intermediate</span>
+                                {% elif drill.difficulty == 'ADVANCED' %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Advanced</span>
+                                {% endif %}
+                                
+                                <!-- Duration for mobile -->
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ drill.duration_minutes }} min</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-700">
+                        {% if drill.drill_type == 'DRAW' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <svg class="mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                            </svg>
+                            Draw
+                        </span>
+                        {% elif drill.drill_type == 'DRIVE' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <svg class="mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                            </svg>
+                            Drive
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ drill.drill_type }}
+                        </span>
                         {% endif %}
                     </td>
-                    <td>{{ drill.duration_minutes }}</td>
-                    <td class="max-w-md">
+                    <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-700">
+                        {% if drill.difficulty == 'BEGINNER' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <svg class="mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                            Beginner
+                        </span>
+                        {% elif drill.difficulty == 'INTERMEDIATE' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <svg class="mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                            </svg>
+                            Intermediate
+                        </span>
+                        {% elif drill.difficulty == 'ADVANCED' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <svg class="mr-1 h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05a6.981 6.981 0 001.688 4.654c.132.133.28.25.438.352a7.01 7.01 0 001.313 1.896l.059.05c.058.045.12.086.18.125.171.105.349.198.532.281.177.078.358.15.539.224.463.163.928.316 1.394.454.465.138.929.26 1.393.377l.183.05c.317.086.648.17.977.246.323.076.65.133.979.183l.244.035c.319.04.646.072.975.092.338.02.678.022 1.018.013l.293-.02c.322-.022.644-.06.964-.116l.241-.046c.324-.07.645-.158.962-.265l.206-.074c.315-.11.624-.244.926-.401l.196-.105c.296-.16.584-.34.856-.546l.153-.121c.274-.214.533-.445.779-.694l.11-.116c.13-.144.259-.288.382-.44l.106-.136c.171-.23.331-.478.482-.727.075-.126.136-.262.211-.388.07-.124.147-.246.208-.38l.075-.17c.171-.42.305-.872.403-1.33l.036-.173a5.93 5.93 0 00.139-1.14v-.053c0-.435-.043-.877-.132-1.307l-.038-.177c-.099-.452-.24-.895-.423-1.31l-.08-.176a5.98 5.98 0 00-.223-.386 6.39 6.39 0 00-.233-.372l-.098-.14c-.16-.214-.33-.424-.514-.618l-.142-.152c-.248-.258-.51-.497-.785-.718l-.127-.105c-.272-.22-.561-.392-.86-.533l-.157-.09a6.52 6.52 0 00-.926-.353l-.206-.057c-.324-.09-.654-.156-.989-.186l-.245-.02a6.762 6.762 0 00-1.014-.004l-.2.01c-.328.02-.655.062-.978.128l-.244.04c-.323.065-.64.155-.954.264l-.203.07c-.32.112-.63.25-.935.406l-.182.09a6.718 6.718 0 00-.853.54l-.174.134c-.162.133-.32.272-.47.42z" clip-rule="evenodd" />
+                            </svg>
+                            Advanced
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-700">
+                        <span class="font-medium">{{ drill.duration_minutes }} min</span>
+                    </td>
+                    <td class="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 max-w-xs">
                         <div class="truncate">{{ drill.description }}</div>
                     </td>
-                    <td>{{ drill.created_at.strftime('%Y-%m-%d') }}</td>
-                    <td class="whitespace-nowrap">
-                        <div class="flex space-x-2">
-                            <button onclick="showEditDrillModal('{{ drill.id }}', '{{ drill.name }}', '{{ drill.drill_type }}', '{{ drill.difficulty }}', {{ drill.duration_minutes }}, '{{ drill.description }}')" class="text-blue-600 hover:text-blue-900">
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ drill.created_at.strftime('%b %d, %Y') }}
+                    </td>
+                    <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex space-x-2 sm:space-x-3 justify-end">
+                            <button onclick="showEditDrillModal('{{ drill.id }}', '{{ drill.name }}', '{{ drill.drill_type }}', '{{ drill.difficulty }}', {{ drill.duration_minutes }}, '{{ drill.description|replace('\n', ' ')|replace('\'', '\\\'')|replace('\"', '\\\"') }}')" 
+                                    class="text-blue-600 hover:text-blue-900 transition-colors duration-200 flex items-center justify-center bg-blue-50 hover:bg-blue-100 rounded-full h-8 w-8"
+                                    title="Edit Drill">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                             </button>
-                            <button class="text-red-600 hover:text-red-900" 
-                                    onclick="confirmDeleteDrill('{{ drill.id }}', '{{ drill.name }}')">
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <button 
+                                    class="text-red-600 hover:text-red-900 transition-colors duration-200 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-full h-8 w-8"
+                                    onclick="confirmDeleteDrill('{{ drill.id }}', '{{ drill.name|replace('\'', '\\\'')|replace('\"', '\\\"') }}')"
+                                    title="Delete Drill">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </button>
@@ -90,6 +235,27 @@
                     </td>
                 </tr>
                 {% endfor %}
+                
+                {% if drills|length == 0 %}
+                <tr>
+                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <svg class="h-12 w-12 text-gray-300 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <p class="font-medium">No drills found</p>
+                            <p class="text-sm mt-1">Create your first drill by clicking the "Create New Drill" button</p>
+                            <button type="button" onclick="showCreateDrillModal()" 
+                                    class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 transform hover:scale-105">
+                                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Create New Drill
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -285,14 +451,51 @@
 
 {% block scripts %}
 <script>
+    // Handle closing alert notifications
+    document.addEventListener('DOMContentLoaded', function() {
+        const closeButtons = document.querySelectorAll('.close-alert');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const alert = this.closest('[role="alert"]');
+                if (alert) {
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.style.display = 'none', 300);
+                }
+            });
+        });
+        
+        // Auto-hide alerts after 5 seconds
+        setTimeout(() => {
+            document.querySelectorAll('[role="alert"]').forEach(alert => {
+                alert.style.opacity = '0';
+                setTimeout(() => alert.style.display = 'none', 300);
+            });
+        }, 5000);
+    });
+
     function showCreateDrillModal() {
         document.getElementById('createDrillModal').classList.remove('hidden');
     }
     
     function showEditDrillModal(id, name, type, difficulty, duration, description) {
         const form = document.getElementById('editDrillForm');
-        form.action = "/admin/drills/" + id + "/edit";
         
+        // Setup for a PUT request
+        form.action = "/admin/drills/" + id;
+        form.method = "POST";
+        
+        // Add method override field for PUT
+        let methodInput = document.getElementById('edit_method_override');
+        if (!methodInput) {
+            methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.id = 'edit_method_override';
+            methodInput.value = 'PUT';
+            form.appendChild(methodInput);
+        }
+        
+        // Set form values
         document.getElementById('edit_name').value = name;
         document.getElementById('edit_drill_type').value = type;
         document.getElementById('edit_difficulty').value = difficulty;
@@ -304,7 +507,21 @@
     
     function confirmDeleteDrill(drillId, drillName) {
         const form = document.getElementById('deleteDrillForm');
-        form.action = "/admin/drills/" + drillId + "/delete";
+        
+        // Setup for a DELETE request
+        form.action = "/admin/drills/" + drillId;
+        form.method = "POST";
+        
+        // Add method override field for DELETE
+        let methodInput = document.getElementById('delete_method_override');
+        if (!methodInput) {
+            methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.id = 'delete_method_override';
+            methodInput.value = 'DELETE';
+            form.appendChild(methodInput);
+        }
         
         document.getElementById('deleteDrillName').textContent = drillName;
         document.getElementById('deleteDrillModal').classList.remove('hidden');

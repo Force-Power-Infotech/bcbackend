@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Union
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
@@ -105,3 +106,31 @@ async def update_otp(db: AsyncSession, *, user: UserModel, otp: Optional[str] = 
     await db.commit()
     await db.refresh(user)
     return user
+
+
+async def get_count(
+    db: AsyncSession, 
+    created_at_before: Optional[datetime] = None,
+    created_at_after: Optional[datetime] = None
+) -> int:
+    """
+    Get the total count of users in the database, with optional date filters.
+    
+    Args:
+        db: AsyncSession - The database session
+        created_at_before: Optional[datetime] - Filter users created before this date
+        created_at_after: Optional[datetime] - Filter users created after this date
+        
+    Returns:
+        int: The total number of users
+    """
+    query = select(func.count()).select_from(UserModel)
+    
+    # Apply filters if provided
+    if created_at_before:
+        query = query.where(UserModel.created_at < created_at_before)
+    if created_at_after:
+        query = query.where(UserModel.created_at >= created_at_after)
+    
+    result = await db.execute(query)
+    return result.scalar_one()

@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin
 from app.admin import routes as admin_routes
+from app.middleware import MethodOverrideMiddleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -24,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add method override middleware for HTML forms to support PUT/DELETE
+app.add_middleware(MethodOverrideMiddleware)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

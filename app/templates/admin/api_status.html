@@ -1,0 +1,316 @@
+{% extends "admin/base.html" %}
+
+{% block title %}API Status - Admin{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container px-4 mx-auto">
+    <!-- Breadcrumbs -->
+    <div class="flex items-center py-4 mb-4 overflow-x-auto whitespace-nowrap">
+        <a href="/admin" class="text-sm font-medium text-gray-600 hover:text-blue-500">
+            <svg class="w-4 h-4 inline mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            Dashboard
+        </a>
+        <span class="mx-2 text-gray-500">/</span>
+        <span class="text-sm font-medium text-gray-800">API Status</span>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-5 border-l-4 border-blue-500">
+            <div class="flex justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Requests (24h)</p>
+                    <p class="text-xl font-semibold text-gray-800">{{ metrics.total_requests }}</p>
+                </div>
+                <div class="rounded-full p-2 bg-blue-50">
+                    <svg class="w-6 h-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-5 border-l-4 border-green-500">
+            <div class="flex justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Avg Response Time</p>
+                    <p class="text-xl font-semibold text-gray-800">{{ metrics.avg_response_time }}</p>
+                </div>
+                <div class="rounded-full p-2 bg-green-50">
+                    <svg class="w-6 h-6 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-5 border-l-4 border-yellow-500">
+            <div class="flex justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Error Rate</p>
+                    <p class="text-xl font-semibold text-gray-800">{{ metrics.error_rate }}</p>
+                </div>
+                <div class="rounded-full p-2 bg-yellow-50">
+                    <svg class="w-6 h-6 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-5 border-l-4 border-purple-500">
+            <div class="flex justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Uptime</p>
+                    <p class="text-xl font-semibold text-gray-800">{{ metrics.uptime }}</p>
+                </div>
+                <div class="rounded-full p-2 bg-purple-50">
+                    <svg class="w-6 h-6 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Response Time Chart -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-5 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">API Response Times (Last 24 Hours)</h3>
+                </div>
+                <div class="p-5">
+                    <canvas id="responseTimeChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <!-- Error Distribution Chart -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-5 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Error Distribution</h3>
+                </div>
+                <div class="p-5">
+                    <canvas id="errorChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column -->
+        <div class="space-y-6">
+            <!-- API Endpoints Status -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-5 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Endpoints Status</h3>
+                </div>
+                <div class="p-3 max-h-96 overflow-y-auto">
+                    <ul class="divide-y divide-gray-200">
+                        {% for endpoint in api_endpoints %}
+                            <li class="p-3">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                                    <div class="mb-2 sm:mb-0">
+                                        <h4 class="text-sm font-medium text-gray-900">{{ endpoint.name }}</h4>
+                                        <p class="text-xs text-gray-500">{{ endpoint.endpoint }}</p>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if endpoint.status == 'ONLINE' %}
+                                                bg-green-100 text-green-800
+                                            {% elif endpoint.status == 'DEGRADED' %}
+                                                bg-yellow-100 text-yellow-800
+                                            {% else %}
+                                                bg-red-100 text-red-800
+                                            {% endif %}">
+                                            {{ endpoint.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                    <div>
+                                        <span>Response: </span>
+                                        <span class="font-medium {% if endpoint.response_time > 300 %}text-red-600{% elif endpoint.response_time > 200 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                                            {{ endpoint.response_time }}ms
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span>Uptime: </span>
+                                        <span class="font-medium {% if endpoint.uptime < 99 %}text-red-600{% elif endpoint.uptime < 99.9 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                                            {{ endpoint.uptime }}%
+                                        </span>
+                                    </div>
+                                    {% if endpoint.last_error %}
+                                    <div class="col-span-2">
+                                        <span>Last Error: </span>
+                                        <span class="font-medium text-red-600">{{ endpoint.last_error }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Actions Panel -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-5 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Monitoring Actions</h3>
+                </div>
+                <div class="p-5">
+                    <div class="space-y-3">
+                        <a href="#" class="flex items-center p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <svg class="w-5 h-5 text-blue-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span class="text-sm font-medium text-gray-700">Refresh Status</span>
+                        </a>
+                        <a href="#" class="flex items-center p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <svg class="w-5 h-5 text-blue-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span class="text-sm font-medium text-gray-700">Generate Report</span>
+                        </a>
+                        <a href="#" class="flex items-center p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors">
+                            <svg class="w-5 h-5 text-blue-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span class="text-sm font-medium text-gray-700">Configure Alerts</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Response time chart
+    const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+    const responseTimeChart = new Chart(responseTimeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ time_points | tojson }},
+            datasets: [
+                {
+                    label: 'Authentication API',
+                    data: {{ response_times.auth | tojson }},
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    fill: true
+                },
+                {
+                    label: 'Practice API',
+                    data: {{ response_times.practice | tojson }},
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    fill: true
+                },
+                {
+                    label: 'Challenges API',
+                    data: {{ response_times.challenges | tojson }},
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.raw + 'ms';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Response Time (ms)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time (24hr)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Error chart
+    const errorCtx = document.getElementById('errorChart').getContext('2d');
+    const errorChart = new Chart(errorCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ error_data.labels | tojson }},
+            datasets: [
+                {
+                    label: 'Last 30 Days',
+                    data: {{ error_data.datasets[0].data | tojson }},
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Previous 30 Days',
+                    data: {{ error_data.datasets[1].data | tojson }},
+                    backgroundColor: 'rgba(209, 213, 219, 0.7)',
+                    borderColor: 'rgba(156, 163, 175, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
