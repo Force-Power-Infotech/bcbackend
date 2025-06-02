@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin
+from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin, drill
 from app.admin import routes as admin_routes
 from app.middleware import MethodOverrideMiddleware
 
@@ -40,6 +40,7 @@ app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", 
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
+app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
 
 # Include Admin UI routes
 app.include_router(admin_routes.router, prefix="/admin", tags=["admin_ui"])

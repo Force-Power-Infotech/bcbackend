@@ -8,10 +8,16 @@ class DrillBase(BaseModel):
     description: Optional[str] = None
     target_score: Optional[int] = Field(None, ge=1, le=10)
     difficulty: Optional[int] = Field(None, ge=1, le=10)
+    drill_type: Optional[str] = Field(None, description="Type of drill (DRAW, DRIVE, etc.)")
+    duration_minutes: Optional[int] = Field(None, ge=1, description="Duration in minutes")
 
 
 class DrillCreate(DrillBase):
-    session_id: int
+    session_id: Optional[int] = None
+    name: str
+    description: str
+    drill_type: str
+    duration_minutes: int
 
 
 class DrillUpdate(DrillBase):
@@ -20,7 +26,7 @@ class DrillUpdate(DrillBase):
 
 class DrillInDBBase(DrillBase):
     id: int
-    session_id: int
+    session_id: Optional[int] = None
     created_at: datetime
 
     class Config:

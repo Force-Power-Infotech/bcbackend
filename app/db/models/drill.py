@@ -7,13 +7,15 @@ from app.db.base import Base
 
 class Drill(Base):
     __tablename__ = "drills"
-
+    
     id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True)
     name = Column(String, nullable=False)
     description = Column(Text)
     target_score = Column(Integer)  # Expected performance threshold
     difficulty = Column(Integer)  # 1-10 scale
+    drill_type = Column(String)  # DRAW, DRIVE, etc.
+    duration_minutes = Column(Integer)  # Duration in minutes
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

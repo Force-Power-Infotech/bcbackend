@@ -751,7 +751,6 @@ async def admin_shots(
 @router.get("/drills", response_class=HTMLResponse, name="admin_drills")
 async def admin_drills(
     request: Request,
-    auth=Depends(require_admin_auth),
     db: AsyncSession = Depends(get_db),
     page: int = 1,
     limit: int = 10,
@@ -761,8 +760,6 @@ async def admin_drills(
     """
     Admin drills listing page with database integration and error handling
     """
-    if isinstance(auth, RedirectResponse):
-        return auth
     
     # Default values for pagination
     pagination = {
@@ -900,7 +897,6 @@ async def admin_drills(
 @router.post("/drills", response_class=HTMLResponse)
 async def admin_create_drill(
     request: Request,
-    auth=Depends(require_admin_auth),
     db: AsyncSession = Depends(get_db),
     name: str = Form(...),
     drill_type: str = Form(...),
@@ -908,11 +904,15 @@ async def admin_create_drill(
     duration_minutes: int = Form(...),
     description: str = Form(...)
 ):
-    """Create a new drill"""
-    if isinstance(auth, RedirectResponse):
-        return auth
-    
+    """Create a new drill using the API endpoint"""
     try:
+        logger.info("Creating new drill:")
+        logger.info(f"Name: {name}")
+        logger.info(f"Type: {drill_type}")
+        logger.info(f"Difficulty: {difficulty}")
+        logger.info(f"Duration: {duration_minutes}")
+        logger.info(f"Description: {description}")
+        
         # Convert string difficulty to numeric value
         difficulty_value = 1  # Default: Beginner
         if difficulty == "INTERMEDIATE":
@@ -920,43 +920,29 @@ async def admin_create_drill(
         elif difficulty == "ADVANCED":
             difficulty_value = 5
         
-        # Create a template session if doesn't exist (id=0)
-        from app.db.models.session import Session
-        template_session_id = 0
-        
-        # Check if template session exists
-        from sqlalchemy import select
-        query = select(Session).where(Session.id == template_session_id)
-        result = await db.execute(query)
-        template_session = result.scalar_one_or_none()
-        
-        if not template_session:
-            # Create a template session for drills not tied to a specific session
-            template_session = Session(
-                id=template_session_id, 
-                user_id=1,  # Admin user ID
-                name="Template Drills",
-                duration_minutes=0,
-                notes="This is a special session for template drills"
+        # Create drill using the API endpoint
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/api/v1/drill/",
+                json={
+                    "name": name,
+                    "description": description,
+                    "target_score": 80,  # Default target score
+                    "difficulty": difficulty_value,
+                    "drill_type": drill_type,
+                    "duration_minutes": duration_minutes
+                }
             )
-            db.add(template_session)
-            await db.commit()
-        
-        # Create the drill
-        drill_in = DrillCreate(
-            session_id=template_session_id,
-            name=name,
-            description=description,
-            target_score=80,  # Default target score
-            difficulty=difficulty_value
-        )
-        
-        await crud_drill.create(db, obj_in=drill_in)
-        logger.info(f"Created drill: {name} ({drill_type}, {difficulty})")
+            
+            if response.status_code != 200:
+                raise Exception(f"API returned status code {response.status_code}")
+            
+            drill = response.json()
+            logger.info(f"Successfully created drill with ID: {drill['id']}")
         
         # Redirect back to drills page with success message
-        response = RedirectResponse(url="/admin/drills?success=created", status_code=302)
-        return response
+        return RedirectResponse(url="/admin/drills?success=created", status_code=302)
     except Exception as e:
         logger.error(f"Error creating drill: {e}")
         # Return with error message
@@ -979,11 +965,6 @@ async def admin_update_drill(
         return auth
     
     try:
-        # Get the drill
-        drill = await crud_drill.get(db, drill_id)
-        if not drill:
-            return RedirectResponse(url="/admin/drills?error=drill_not_found", status_code=302)
-            
         # Convert string difficulty to numeric value
         difficulty_value = 1  # Default: Beginner
         if difficulty == "INTERMEDIATE":
@@ -991,15 +972,28 @@ async def admin_update_drill(
         elif difficulty == "ADVANCED":
             difficulty_value = 5
         
-        # Update the drill
-        update_data = {
-            "name": name,
-            "description": description,
-            "difficulty": difficulty_value
-        }
-        
-        updated_drill = await crud_drill.update(db, db_obj=drill, obj_in=update_data)
-        logger.info(f"Updated drill {drill_id}: {name}")
+        # Update the drill using the API endpoint
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"http://localhost:8000/api/v1/drill/{drill_id}",
+                json={
+                    "name": name,
+                    "description": description,
+                    "target_score": 80,  # Default target score
+                    "difficulty": difficulty_value,
+                    "drill_type": drill_type,
+                    "duration_minutes": duration_minutes
+                }
+            )
+            
+            if response.status_code == 404:
+                return RedirectResponse(url="/admin/drills?error=drill_not_found", status_code=302)
+            if response.status_code != 200:
+                raise Exception(f"API returned status code {response.status_code}")
+            
+            updated_drill = response.json()
+            logger.info(f"Updated drill {drill_id}: {name}")
         
         # Redirect back to drills page with success message
         return RedirectResponse(url="/admin/drills?success=updated", status_code=302)
@@ -1019,16 +1013,21 @@ async def admin_delete_drill(
         return auth
     
     try:
-        # Get the drill to log its name
-        drill = await crud_drill.get(db, drill_id)
-        if not drill:
-            return RedirectResponse(url="/admin/drills?error=drill_not_found", status_code=302)
-        
-        drill_name = drill.name
-        
-        # Delete the drill
-        await crud_drill.remove(db, id=drill_id)
-        logger.info(f"Deleted drill {drill_id}: {drill_name}")
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # First get the drill details for logging
+            get_response = await client.get(f"http://localhost:8000/api/v1/drill/{drill_id}")
+            if get_response.status_code == 404:
+                return RedirectResponse(url="/admin/drills?error=drill_not_found", status_code=302)
+            drill = get_response.json()
+            drill_name = drill["name"]
+            
+            # Delete the drill
+            delete_response = await client.delete(f"http://localhost:8000/api/v1/drill/{drill_id}")
+            if delete_response.status_code != 200:
+                raise Exception(f"API returned status code {delete_response.status_code}")
+            
+            logger.info(f"Deleted drill {drill_id}: {drill_name}")
         
         # Return success response
         return RedirectResponse(url="/admin/drills?success=deleted", status_code=302)

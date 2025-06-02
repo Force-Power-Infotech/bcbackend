@@ -75,7 +75,9 @@ async def create(db: AsyncSession, *, obj_in: DrillCreate) -> Drill:
         name=obj_in.name,
         description=obj_in.description,
         target_score=obj_in.target_score,
-        difficulty=obj_in.difficulty
+        difficulty=obj_in.difficulty,
+        drill_type=obj_in.drill_type,
+        duration_minutes=obj_in.duration_minutes
     )
     db.add(db_obj)
     await db.commit()
@@ -98,9 +100,9 @@ async def update(db: AsyncSession, *, db_obj: Drill, obj_in: Union[DrillUpdate, 
     return db_obj
 
 
-async def remove(db: AsyncSession, *, id: int) -> Drill:
+async def remove(db: AsyncSession, *, drill_id: int) -> Drill:
     """Delete a drill"""
-    result = await db.execute(select(Drill).where(Drill.id == id))
+    result = await db.execute(select(Drill).where(Drill.id == drill_id))
     obj = result.scalars().first()
     if obj:
         await db.delete(obj)
