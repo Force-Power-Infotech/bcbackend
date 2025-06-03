@@ -22,8 +22,8 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     otp = Column(String(6), nullable=True)  # Add OTP column to store the current OTP
-    
-    # Relationships
+      # Relationships
     sessions = relationship("Session", back_populates="user")
     sent_challenges = relationship("Challenge", back_populates="sender", foreign_keys="Challenge.sender_id")
+    drill_groups = relationship("DrillGroup", back_populates="user")
     received_challenges = relationship("Challenge", back_populates="recipient", foreign_keys="Challenge.recipient_id")

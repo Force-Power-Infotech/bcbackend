@@ -122,7 +122,7 @@
                     <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difficulty</th>
                     <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                    <th scope="col" class="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target Score</th>
                     <th scope="col" class="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     <th scope="col" class="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Actions</th>
                 </tr>
@@ -208,15 +208,17 @@
                     <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-700">
                         <span class="font-medium">{{ drill.duration_minutes }} min</span>
                     </td>
-                    <td class="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 max-w-xs">
-                        <div class="truncate">{{ drill.description }}</div>
+                    <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-700">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if drill.target_score >= 80 %}bg-red-100 text-red-800{% elif drill.target_score >= 60 %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ drill.target_score }}%
+                        </span>
                     </td>
                     <td class="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-500">
                         {{ drill.created_at.strftime('%b %d, %Y') }}
                     </td>
                     <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex space-x-2 sm:space-x-3 justify-end">
-                            <button onclick="showEditDrillModal('{{ drill.id }}', '{{ drill.name }}', '{{ drill.drill_type }}', '{{ drill.difficulty }}', {{ drill.duration_minutes }}, '{{ drill.description|replace('\n', ' ')|replace('\'', '\\\'')|replace('\"', '\\\"') }}')" 
+                            <button onclick="showEditDrillModal('{{ drill.id }}', '{{ drill.name }}', '{{ drill.drill_type }}', '{{ drill.difficulty }}', {{ drill.duration_minutes }}, '{{ drill.description|replace('\n', ' ')|replace('\'', '\\\'')|replace('\"', '\\\"') }}', {{ drill.target_score|default(80) }})" 
                                     class="text-blue-600 hover:text-blue-900 transition-colors duration-200 flex items-center justify-center bg-blue-50 hover:bg-blue-100 rounded-full h-8 w-8"
                                     title="Edit Drill">
                                 <svg class="h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -352,6 +354,10 @@
                     <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
                     <textarea name="description" id="description" rows="4" required class="admin-input mt-1" placeholder="Detailed drill description..."></textarea>
                 </div>
+                <div>
+                    <label for="target_score" class="block text-sm font-medium text-gray-700">Target Score (0-100)</label>
+                    <input type="number" name="target_score" id="target_score" class="admin-input mt-1" min="0" max="100" value="80">
+                </div>
             </div>
             <div class="mt-6 flex justify-end space-x-3">
                 <button type="button" onclick="document.getElementById('createDrillModal').classList.add('hidden')" class="admin-button bg-gray-200 text-gray-700 hover:bg-gray-300">
@@ -407,6 +413,10 @@
                 <div>
                     <label for="edit_description" class="block text-sm font-medium text-gray-700">Description</label>
                     <textarea name="description" id="edit_description" rows="4" required class="admin-input mt-1" placeholder="Detailed drill description..."></textarea>
+                </div>
+                <div>
+                    <label for="edit_target_score" class="block text-sm font-medium text-gray-700">Target Score (0-100)</label>
+                    <input type="number" name="target_score" id="edit_target_score" class="admin-input mt-1" min="0" max="100" value="80">
                 </div>
             </div>
             <div class="mt-6 flex justify-end space-x-3">
@@ -477,7 +487,7 @@
         document.getElementById('createDrillModal').classList.remove('hidden');
     }
     
-    function showEditDrillModal(id, name, type, difficulty, duration, description) {
+    function showEditDrillModal(id, name, type, difficulty, duration, description, targetScore) {
         const form = document.getElementById('editDrillForm');
         
         // Setup for a PUT request
@@ -501,6 +511,7 @@
         document.getElementById('edit_difficulty').value = difficulty;
         document.getElementById('edit_duration_minutes').value = duration;
         document.getElementById('edit_description').value = description;
+        document.getElementById('edit_target_score').value = targetScore;
         
         document.getElementById('editDrillModal').classList.remove('hidden');
     }

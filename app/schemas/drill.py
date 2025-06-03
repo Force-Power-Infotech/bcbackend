@@ -6,18 +6,15 @@ from datetime import datetime
 class DrillBase(BaseModel):
     name: str
     description: Optional[str] = None
-    target_score: Optional[int] = Field(None, ge=1, le=10)
-    difficulty: Optional[int] = Field(None, ge=1, le=10)
-    drill_type: Optional[str] = Field(None, description="Type of drill (DRAW, DRIVE, etc.)")
-    duration_minutes: Optional[int] = Field(None, ge=1, description="Duration in minutes")
+    target_score: int = Field(default=80, ge=0, le=100, description="Target score (0-100)")
+    difficulty: int = Field(default=1, ge=1, le=5, description="Difficulty level (1-5)")
+    drill_type: str = Field(description="Type of drill (DRAW, DRIVE, etc.)")
+    duration_minutes: int = Field(default=30, ge=5, le=120, description="Duration in minutes")
 
 
 class DrillCreate(DrillBase):
     session_id: Optional[int] = None
-    name: str
-    description: str
-    drill_type: str
-    duration_minutes: int
+    description: str  # Make description required for create
 
 
 class DrillUpdate(DrillBase):

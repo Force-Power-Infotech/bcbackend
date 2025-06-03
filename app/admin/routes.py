@@ -10,7 +10,7 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 import logging
 
 from app.db.base import get_db
-from app.crud import crud_user, crud_practice, crud_challenge, crud_drill
+from app.crud import crud_user, crud_practice, crud_challenge, crud_drill, crud_drill_group
 from app.schemas.user import User
 from app.schemas.drill import DrillCreate, DrillUpdate
 from app.db.models.drill import Drill as DrillModel
@@ -919,20 +919,22 @@ async def admin_create_drill(
             difficulty_value = 3
         elif difficulty == "ADVANCED":
             difficulty_value = 5
-        
-        # Create drill using the API endpoint
+          # Create drill using the API endpoint
         import httpx
+        drill_data = {
+            "name": name,
+            "description": description,
+            "drill_type": drill_type,
+            "duration_minutes": int(duration_minutes),
+            "target_score": 80,  # Default target score
+            "difficulty": difficulty_value
+        }
+        logger.info(f"Sending drill data to API: {drill_data}")
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "http://localhost:8000/api/v1/drill/",
-                json={
-                    "name": name,
-                    "description": description,
-                    "target_score": 80,  # Default target score
-                    "difficulty": difficulty_value,
-                    "drill_type": drill_type,
-                    "duration_minutes": duration_minutes
-                }
+                json=drill_data
             )
             
             if response.status_code != 200:
@@ -1661,3 +1663,228 @@ async def admin_api_status(
     })
     
     return templates.TemplateResponse("admin/api_status.html", context)
+
+# --- Drill Groups Admin Routes ---
+
+@router.get("/drill-groups", response_class=HTMLResponse)
+async def admin_drill_groups_list(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - List all drill groups"""
+    try:
+        context = get_admin_context(request)
+        
+        # Import necessary modules
+        from app.crud import crud_drill_group
+        from app.db.models.drill_group import DrillGroup
+        from app.db.models.user import User
+        from app.db.models.drill import Drill
+        from sqlalchemy import select, func, join
+        
+        # Calculate pagination
+        skip = (page - 1) * page_size
+        
+        # Get total count and drill groups
+        total_groups = await db.scalar(select(func.count()).select_from(DrillGroup))
+        drill_groups = await crud_drill_group.get_multi(db, skip=skip, limit=page_size)
+
+        # Get stats for the dashboard cards
+        stats = {
+            "total_groups": total_groups,
+            "total_drills": await db.scalar(select(func.count()).select_from(Drill)),
+            "active_users": await db.scalar(select(func.count(func.distinct(DrillGroup.user_id))).select_from(DrillGroup))
+        }
+        
+        # Efficiently get user info for all groups in one query
+        user_ids = [group.user_id for group in drill_groups]
+        if user_ids:
+            users_result = await db.execute(
+                select(User).where(User.id.in_(user_ids))
+            )
+            users = {user.id: user for user in users_result.scalars().all()}
+            
+            # Attach user emails to groups
+            for group in drill_groups:
+                user = users.get(group.user_id)
+                group.user_email = user.email if user else "Unknown"
+
+        # Calculate pagination info
+        total_pages = (total_groups + page_size - 1) // page_size
+        page_range = get_page_range(page, total_pages)
+        
+        context.update({
+            "drill_groups": drill_groups,
+            "total": total_groups,
+            "stats": stats,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "page_range": page_range,
+            "showing_start": skip + 1 if total_groups > 0 else 0,
+            "showing_end": min(skip + page_size, total_groups)
+        })
+        
+        return templates.TemplateResponse(
+            "admin/drill_groups.html",
+            context
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in admin_drill_groups_list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/drill-groups/{group_id}", response_class=HTMLResponse)
+async def admin_drill_group_detail(
+    request: Request,
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - View/Edit drill group details"""
+    context = get_admin_context(request)
+    
+    from app.crud import crud_drill_group
+    drill_group = await crud_drill_group.get(db, drill_group_id=group_id)
+    if not drill_group:
+        raise HTTPException(status_code=404, detail="Drill group not found")
+    
+    # Get user info
+    user = await crud_user.get(db, id=drill_group.user_id)
+    drill_group.user_email = user.email if user else "Unknown"
+    
+    # Get all drills for selection
+    all_drills = await crud_drill.get_multi(db)
+    
+    context.update({
+        "drill_group": drill_group,
+        "all_drills": all_drills
+    })
+    
+    return templates.TemplateResponse(
+        "admin/drill_group_detail.html",
+        context
+    )
+
+
+@router.post("/drill-groups/{group_id}", response_class=HTMLResponse)
+async def admin_update_drill_group(
+    request: Request,
+    group_id: int,
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    drill_ids: List[int] = Form([]),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - Update drill group"""
+    from app.crud import crud_drill_group
+    from app.schemas.drill_group import DrillGroupUpdate
+    
+    drill_group = await crud_drill_group.get(db, drill_group_id=group_id)
+    if not drill_group:
+        raise HTTPException(status_code=404, detail="Drill group not found")
+    
+    # Update basic info
+    update_data = DrillGroupUpdate(
+        name=name,
+        description=description
+    )
+    await crud_drill_group.update(db, db_obj=drill_group, obj_in=update_data)
+    
+    # Update drills
+    await crud_drill_group.update_drills(db, drill_group=drill_group, drill_ids=drill_ids)
+    
+    return RedirectResponse(
+        url=f"/admin/drill-groups/{group_id}",
+        status_code=302
+    )
+
+
+@router.delete("/drill-groups/{group_id}")
+async def admin_delete_drill_group(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - Delete drill group"""
+    from app.crud import crud_drill_group
+    
+    drill_group = await crud_drill_group.get(db, drill_group_id=group_id)
+    if not drill_group:
+        raise HTTPException(status_code=404, detail="Drill group not found")
+    
+    await crud_drill_group.remove(db, drill_group_id=group_id)
+    
+    return JSONResponse({"status": "success"})
+
+@router.get("/drill-groups/create", response_class=HTMLResponse)
+async def admin_create_drill_group(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - Create new drill group form"""
+    context = get_admin_context(request)
+    
+    # Get all drills for selection
+    all_drills = await crud_drill.get_multi(db)
+    
+    context.update({
+        "all_drills": all_drills
+    })
+    
+    return templates.TemplateResponse(
+        "admin/drill_group_create.html",
+        context
+    )
+
+
+@router.post("/drill-groups/create", response_class=HTMLResponse)
+async def admin_create_drill_group_post(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    drill_ids: List[int] = Form([]),
+    _=Depends(require_admin_auth)
+):
+    """Admin panel - Handle drill group creation"""
+    from app.schemas.drill_group import DrillGroupCreate
+    
+    try:
+        # Create group under admin user
+        admin_user = await crud_user.get_by_email(db, email=ADMIN_CREDENTIALS["username"])
+        if not admin_user:
+            raise HTTPException(status_code=404, detail="Admin user not found")
+        
+        group_data = DrillGroupCreate(
+            name=name,
+            description=description
+        )
+        
+        drill_group = await crud_drill_group.create(
+            db=db,
+            obj_in=group_data,
+            user_id=admin_user.id
+        )
+        
+        # Add drills to group
+        if drill_ids:
+            await crud_drill_group.update_drills(
+                db=db,
+                drill_group=drill_group,
+                drill_ids=drill_ids
+            )
+        
+        return RedirectResponse(
+            url=f"/admin/drill-groups/{drill_group.id}",
+            status_code=302
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating drill group: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

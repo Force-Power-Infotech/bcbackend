@@ -5,9 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin, drill
+from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin, drill_group, drill
 from app.admin import routes as admin_routes
-from app.middleware import MethodOverrideMiddleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -26,21 +25,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add method override middleware for HTML forms to support PUT/DELETE
-app.add_middleware(MethodOverrideMiddleware)
-
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include API routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(user.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
 app.include_router(practice.router, prefix=f"{settings.API_V1_STR}/practice", tags=["practice"])
 app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", tags=["challenge"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
-app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
+app.include_router(drill_group.router, prefix=f"{settings.API_V1_STR}/drill-groups", tags=["drill_groups"])
 
 # Include Admin UI routes
 app.include_router(admin_routes.router, prefix="/admin", tags=["admin_ui"])

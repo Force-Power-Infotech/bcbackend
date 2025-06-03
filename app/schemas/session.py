@@ -11,7 +11,8 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    pass
+    drill_ids: Optional[List[int]] = []
+    drill_group_ids: Optional[List[int]] = []
 
 
 class SessionUpdate(SessionBase):

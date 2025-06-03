@@ -36,8 +36,14 @@ async def create_drill(
     """
     Create a new drill. Session ID is optional to allow template drills.
     """
-    drill = await crud_drill.create(db, obj_in=drill_in)
-    return drill
+    try:
+        drill = await crud_drill.create(db, obj_in=drill_in)
+        return drill
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Could not create drill: {str(e)}"
+        )
 
 @router.get("/{drill_id}", response_model=Drill)
 async def get_drill(

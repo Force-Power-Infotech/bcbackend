@@ -42,16 +42,46 @@ async def get_by_user(
 
 
 async def create(db: AsyncSession, *, obj_in: SessionCreate, user_id: int) -> Session:
-    db_obj = Session(
-        user_id=user_id,
-        title=obj_in.title,
-        description=obj_in.description,
-        duration_minutes=obj_in.duration_minutes,
-        location=obj_in.location,
-    )
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
+    """Create a new practice session with drill groups support"""
+    # Start a transaction
+    async with db.begin():
+        # Create the session
+        db_obj = Session(
+            user_id=user_id,
+            title=obj_in.title,
+            description=obj_in.description,
+            duration_minutes=obj_in.duration_minutes,
+            location=obj_in.location,
+        )
+        db.add(db_obj)
+        await db.flush()  # Get the session ID
+        
+        # Add drills directly specified
+        if obj_in.drill_ids:
+            for drill_id in obj_in.drill_ids:
+                drill = await db.execute(select(Drill).where(Drill.id == drill_id))
+                drill = drill.scalar_one_or_none()
+                if drill:
+                    db_obj.drills.append(drill)
+        
+        # Add drills from drill groups
+        if obj_in.drill_group_ids:
+            from app.db.models.drill_group import DrillGroup
+            for group_id in obj_in.drill_group_ids:
+                group = await db.execute(
+                    select(DrillGroup)
+                    .options(selectinload(DrillGroup.drills))
+                    .where(DrillGroup.id == group_id)
+                )
+                group = group.scalar_one_or_none()
+                if group:
+                    for drill in group.drills:
+                        if drill not in db_obj.drills:  # Avoid duplicates
+                            db_obj.drills.append(drill)
+        
+        await db.commit()
+        await db.refresh(db_obj)
+        
     return db_obj
 
 
