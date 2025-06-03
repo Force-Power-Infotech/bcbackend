@@ -16,6 +16,15 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
+# Set up session middleware
+from starlette.middleware.sessions import SessionMiddleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="your-secret-key-here",  # Replace with a secure secret key
+    session_cookie="bowlsace_session",
+    max_age=86400  # 24 hours
+)
+
 # Set up CORS
 app.add_middleware(
     CORSMiddleware,

@@ -1,125 +1,33 @@
-from typing import Any, List
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from datetime import timedelta
+from fastapi.responses import JSONResponse
 
-from app.core.config import settings
-from app.core.security import create_access_token
 from app.db.base import get_db
 from app.db.models.user import User as UserModel
-from app.schemas.user import User, UserCreate, Token
-from app.schemas.auth import (
-    PhoneNumberRequest, OTPVerify, RegistrationComplete, 
-    LoginComplete, PhoneVerificationResponse, OTPVerificationResponse
-)
+from app.schemas.user import User, UserCreate
 from app.crud import crud_user
-from app.utils.otp import generate_otp as db_generate_otp, verify_otp as db_verify_otp, mock_send_otp
-from app.utils.email import send_verification_email
+from app.api import deps
+from app.schemas.auth import PhoneNumberRequest, OTPVerify, PhoneVerificationResponse, OTPVerificationResponse
 
 router = APIRouter()
 
-
-@router.post("/register", response_model=User)
-async def register_user(
-    user_in: UserCreate,
-    db: AsyncSession = Depends(get_db),
+@router.post("/login")
+async def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Register a new user.
+    Log in user and set session
     """
-    # Check if user with this email already exists
-    user = await crud_user.get_by_email(db, email=user_in.email)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists",
-        )
-    
-    # Check if user with this username already exists
-    user = await crud_user.get_by_username(db, username=user_in.username)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this username already exists",
-        )
-    
-    # Check if user with this phone number already exists
-    user = await crud_user.get_by_phone(db, phone_number=user_in.phone_number)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this phone number already exists",
-        )
-    
-    # Create new user
-    user = await crud_user.create(db, obj_in=user_in)
-    return user
-
-
-@router.post("/request-otp", response_model=PhoneVerificationResponse)
-async def request_otp(
-    phone_req: PhoneNumberRequest,
-    db: AsyncSession = Depends(get_db),
-) -> Any:
-    """
-    Request an OTP to be sent to the phone number
-    """
-    phone_number = phone_req.phone_number
-
-    # Generate and send OTP
-    otp = await db_generate_otp(db, phone_number)
-
-    # In production, use an actual SMS service
-    mock_send_otp(phone_number, otp)
-
-    return {
-        "message": f"OTP sent to {phone_number}",
-        "success": True
-    }
-
-
-@router.post("/verify-otp", response_model=OTPVerificationResponse)
-async def verify_phone_otp(
-    otp_data: OTPVerify,
-    db: AsyncSession = Depends(get_db),
-) -> Any:
-    """
-    Verify the OTP sent to the phone number
-    """
-    phone_number = otp_data.phone_number
-    otp_code = otp_data.otp
-
-    is_valid = await db_verify_otp(db, phone_number, otp_code)
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP"
-        )
-
-    return {
-        "message": "OTP verified successfully",
-        "success": True
-    }
-
-
-
-@router.post("/login", response_model=Token)
-async def login_for_access_token(
-    db: AsyncSession = Depends(get_db),
-    form_data: OAuth2PasswordRequestForm = Depends(),
-) -> Any:
-    """
-    Get an access token for future requests.
-    """
-    user = await crud_user.authenticate(db, username=form_data.username, password=form_data.password)
+    user = await crud_user.authenticate(db, username=username, password=password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Incorrect username or password"
         )
     if not user.is_active:
         raise HTTPException(
@@ -127,76 +35,137 @@ async def login_for_access_token(
             detail="Inactive user"
         )
     
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        subject=user.id, expires_delta=access_token_expires
-    )
+    # Set session data
+    request.session["username"] = user.username
+    request.session["user_id"] = user.id
     
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
+        "status": "success",
+        "message": "Successfully logged in",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_admin": user.is_admin
+        }
     }
 
-
-@router.post("/register/complete", response_model=User)
-async def complete_registration(
-    registration_data: RegistrationComplete,
-    db: AsyncSession = Depends(get_db),
+@router.post("/register", response_model=User)
+async def register_user(
+    username: str = Form(...),
+    password: str = Form(...),
+    email: str = Form(...),
+    full_name: str = Form(...),
+    db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Complete user registration after OTP verification
+    Register a new user.
     """
-    # First verify the OTP again
-    phone_number = registration_data.phone_number
-    otp_code = registration_data.otp
-    
-    # Verify OTP
-    is_valid = await db_verify_otp(db, phone_number, otp_code)
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP"
-        )
-    
-    # Check if user already exists
-    user = await crud_user.get_by_phone(db, phone_number=phone_number)
+    # Check if user with this email already exists
+    user = await crud_user.get_by_email(db, email=email)
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this phone number already exists"
+            detail="A user with this email already exists",
         )
     
-    # Check if email exists
-    user = await crud_user.get_by_email(db, email=registration_data.email)
+    # Check if user with this username already exists
+    user = await crud_user.get_by_username(db, username=username)
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
-        )
-    
-    # Check if username exists
-    user = await crud_user.get_by_username(db, username=registration_data.username)
-    if user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this username already exists"
+            detail="A user with this username already exists",
         )
     
     # Create new user
     user_in = UserCreate(
-        email=registration_data.email,
-        username=registration_data.username,
-        password=registration_data.password,
-        phone_number=phone_number,
-        full_name=registration_data.full_name,
+        email=email,
+        username=username,
+        password=password,
+        full_name=full_name
     )
     user = await crud_user.create(db, obj_in=user_in)
-    
-    # Mark phone as verified since OTP was validated
-    user = await crud_user.mark_phone_verified(db, user=user)
-    
-    # Send email verification if email service is configured
-    if settings.EMAILS_ENABLED:
-        await send_verification_email(email_to=user.email)
-    
     return user
+
+@router.post("/logout")
+async def logout(request: Request):
+    """
+    Log out user by clearing session
+    """
+    request.session.clear()
+    return {"status": "success", "message": "Successfully logged out"}
+
+@router.post("/request-otp", response_model=PhoneVerificationResponse)
+async def request_otp(
+    phone_number: str,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Request OTP for login/registration
+    """
+    # For now, always return static OTP
+    static_otp = "0000"
+    
+    # Check if user exists
+    user = await crud_user.get_by_phone(db, phone_number=phone_number)
+    
+    if user:
+        # Store OTP for existing user
+        await crud_user.update_otp(db, user=user, otp=static_otp)
+    else:
+        # Create a temporary user with just phone and OTP
+        user_data = UserCreate(
+            email=f"temp_{phone_number}@temp.com",  # temporary email
+            username=f"temp_{phone_number}",  # temporary username
+            password="temp_password",  # temporary password
+            phone_number=phone_number,
+            full_name="Temporary User"
+        )
+        user = await crud_user.create(db, obj_in=user_data)
+        await crud_user.update_otp(db, user=user, otp=static_otp)
+    
+    return {"message": "OTP sent successfully", "success": True}
+
+@router.post("/verify-otp", response_model=OTPVerificationResponse)
+async def verify_otp(
+    request: Request,
+    verify_data: OTPVerify,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Verify OTP and return user status
+    """
+    user = await crud_user.get_by_phone(db, phone_number=verify_data.phone_number)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Verify OTP
+    if user.otp == verify_data.otp:
+        # Clear OTP after successful verification
+        await crud_user.update_otp(db, user=user, otp=None)
+        
+        # Check if this is the first time (temporary user)
+        is_new_user = user.username.startswith("temp_")
+        
+        return {
+            "message": "OTP verified successfully",
+            "success": True,
+            "is_new_user": is_new_user,
+            "user_data": {
+                "id": user.id,
+                "phone_number": user.phone_number,
+                "username": None if is_new_user else user.username,
+                "email": None if is_new_user else user.email
+            }
+        }
+    
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid OTP"
+    )
