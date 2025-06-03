@@ -46,6 +46,39 @@ async def get_current_user(
     return user
 
 
+from fastapi.security import OAuth2PasswordBearer as OAuth2Scheme
+
+# Make token optional to allow unauthenticated requests
+oauth2_scheme_optional = OAuth2Scheme(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
+
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db), 
+    token: Optional[str] = Depends(oauth2_scheme_optional)
+) -> Optional[User]:
+    """
+    Similar to get_current_user but doesn't raise an exception if token is missing
+    Returns None if no token or invalid token is provided
+    """
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (JWTError, ValidationError):
+        return None
+    
+    # Get user from database
+    user_id = int(token_data.sub)
+    user = await crud_user.get(db, user_id=user_id)
+    if not user:
+        return None
+    
+    return user
+
+
 def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:

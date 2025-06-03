@@ -11,7 +11,10 @@ class DrillGroupBase(BaseModel):
 
 
 class DrillGroupCreate(DrillGroupBase):
-    pass
+    drill_ids: Optional[List[int]] = Field(default=[], description="List of drill IDs to add to the group")
+    is_public: bool = Field(default=True, description="Whether the drill group is public")
+    tags: Optional[List[str]] = Field(default=[], description="Tags for categorizing the drill group")
+    difficulty: Optional[int] = Field(default=1, ge=1, le=5, description="Difficulty level of the drill group")
 
 
 class DrillGroupUpdate(DrillGroupBase):
@@ -21,7 +24,10 @@ class DrillGroupUpdate(DrillGroupBase):
 
 class DrillGroupInDBBase(DrillGroupBase):
     id: int
-    user_id: int
+    user_id: Optional[int] = None
+    is_public: bool = True
+    difficulty: Optional[int] = 1
+    tags: Optional[List[str]] = Field(default=[])
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -30,4 +36,4 @@ class DrillGroupInDBBase(DrillGroupBase):
 
 
 class DrillGroup(DrillGroupInDBBase):
-    drills: List[Drill] = []
+    drills: Optional[List[Drill]] = Field(default=[])

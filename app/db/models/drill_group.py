@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -9,9 +9,12 @@ class DrillGroup(Base):
     __tablename__ = "drill_groups"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     name = Column(String, nullable=False)
     description = Column(Text)
+    is_public = Column(Boolean, default=True)
+    difficulty = Column(Integer, default=1)
+    tags = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

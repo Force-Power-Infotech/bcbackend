@@ -55,18 +55,45 @@ async def create(
     db: AsyncSession,
     *,
     obj_in: DrillGroupCreate,
-    user_id: int
+    user_id: Optional[int] = None
 ) -> DrillGroup:
     """Create a new drill group"""
+    # Create the basic drill group
     db_obj = DrillGroup(
         user_id=user_id,
         name=obj_in.name,
-        description=obj_in.description
+        description=obj_in.description,
+        # We could store these in JSON columns or separate tables
+        is_public=getattr(obj_in, "is_public", True),
+        difficulty=getattr(obj_in, "difficulty", 1),
+        tags=getattr(obj_in, "tags", [])
     )
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+    
+    # Add drills to the group if provided
+    if hasattr(obj_in, "drill_ids") and obj_in.drill_ids:
+        from app.crud import crud_drill
+        valid_drills = []
+        for drill_id in obj_in.drill_ids:
+            try:
+                drill = await crud_drill.get(db, drill_id=drill_id)
+                if drill:
+                    valid_drills.append(drill)
+            except Exception:
+                # Skip invalid drill IDs
+                pass
+        
+        if valid_drills:
+            db_obj.drills = valid_drills
+            await db.commit()
+        
+    await db.refresh(db_obj)
     return db_obj
+
+
+"""This function has been merged into the main 'create' function with an optional user_id parameter"""
 
 
 async def update(
@@ -159,3 +186,30 @@ async def update_drills(
     await db.commit()
     await db.refresh(drill_group)
     return drill_group
+
+
+async def get_admin_user_id(db: AsyncSession) -> Optional[int]:
+    """Get the admin user ID to use for drill groups, or None if no users exist"""
+    from app.crud.crud_user import get_by_email
+    from app.core.config import settings
+    
+    # Try to get the admin user
+    try:
+        admin_user = await get_by_email(db, email=settings.ADMIN_EMAIL)
+        if admin_user:
+            return admin_user.id
+    except Exception:
+        pass
+    
+    # If no admin user, get the first user
+    from sqlalchemy import select
+    from app.db.models.user import User
+    
+    result = await db.execute(select(User).limit(1))
+    user = result.scalars().first()
+    
+    if user:
+        return user.id
+    
+    # If no users exist, return None
+    return None

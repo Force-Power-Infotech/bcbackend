@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     
     # Environment
     ENV: str = os.getenv("ENV", "development")  # "development", "testing", or "production"
-      # Database settings
+    
+    # Admin settings
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "admin@bowlsace.com")
+    
+    # Database settings
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "bowlsace")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "supersecret")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "bowlsacedb")

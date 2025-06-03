@@ -1,13 +1,13 @@
 # Drill Groups API Documentation
 
 ## Overview
-The Drill Groups API allows users to create and manage collections of drills. Each drill group belongs to a specific user and can contain multiple drills.
+The Drill Groups API allows users to create and manage collections of drills. Each drill group can optionally belong to a specific user and can contain multiple drills. The API now supports public drill groups that don't require authentication to access or create.
 
 ## Endpoints
 
 ### 1. List Drill Groups
 
-Get all drill groups for the authenticated user.
+Get all drill groups. No authentication required.
 
 ```http
 GET /api/v1/drill-groups
@@ -41,7 +41,7 @@ Example Response:
 
 ### 2. Create Drill Group
 
-Create a new drill group.
+Create a new drill group. No authentication required.
 
 ```http
 POST /api/v1/drill-groups
@@ -52,9 +52,14 @@ Request Body:
 {
   "name": "Yash's Drills",
   "description": "My favorite drills for improvement",
-  "drill_ids": [1, 5, 7]
+  "drill_ids": [1, 5, 7],
+  "is_public": true,
+  "tags": ["beginner", "drive"],
+  "difficulty": 2
 }
 ```
+
+All fields except `name` are optional.
 
 Example Response:
 ```json
@@ -214,3 +219,48 @@ Request Body:
 ```
 
 The system will automatically include all drills from the specified drill groups along with any individual drills specified.
+
+## June 2025 API Updates
+
+### Authentication Changes
+- Authentication is now **optional** for all drill group endpoints 
+- Public drill groups can be created and accessed without authentication
+- When authenticated, you can still manage your own drill groups as before
+
+### New Drill Group Properties
+The drill group model has been extended with these new properties:
+
+- `is_public` (boolean): Whether the drill group is publicly accessible (default: true)
+- `difficulty` (integer): The difficulty level from 1-5 (default: 1)
+- `tags` (array): A list of string tags for categorization (default: [])
+
+### Example Usage
+
+**Creating a public drill group:**
+```http
+POST /api/v1/drill-groups
+
+{
+  "name": "Public Beginner Drills",
+  "description": "A collection of simple drills for beginners",
+  "is_public": true,
+  "difficulty": 1,
+  "tags": ["beginner", "basic", "starter"],
+  "drill_ids": [1, 2, 3]
+}
+```
+
+**Response format:**
+```json
+{
+  "id": 45,
+  "name": "Public Beginner Drills",
+  "description": "A collection of simple drills for beginners",
+  "user_id": null,
+  "is_public": true,
+  "difficulty": 1,
+  "tags": ["beginner", "basic", "starter"],
+  "created_at": "2025-06-03T15:30:00Z",
+  "updated_at": "2025-06-03T15:30:00Z"
+}
+```
