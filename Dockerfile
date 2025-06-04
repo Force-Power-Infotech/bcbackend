@@ -19,28 +19,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy project
+COPY . .
+
+# Set up wait-for-it script
+RUN chmod +x /app/scripts/wait-for-it.sh && \
+    ln -s /app/scripts/wait-for-it.sh /usr/local/bin/wait-for-it.sh
+
 # Install Python dependencies
-COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # Install Tailwind CSS dependencies
-COPY package.json package-lock.json* ./
 RUN npm ci
-
-# Copy project
-COPY . .
 
 # Build Tailwind CSS
 RUN npm run build:css && npm cache clean --force
 
-# Add wait-for script
-COPY scripts/wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
-
 # Create non-root user
 RUN adduser --disabled-password --gecos "" appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod +x /usr/local/bin/wait-for-it.sh
 USER appuser
 
 EXPOSE 8000
