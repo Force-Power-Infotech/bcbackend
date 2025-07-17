@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.api.v1 import auth, user, practice, challenge, dashboard, advisor, admin, drill_group, drill
+from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, admin, drill_group, drill
 from app.admin import routes as admin_routes
 
 # Create FastAPI app
@@ -15,6 +15,14 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+# Database connection management
+from app.db.base import engine
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Close all database connections
+    await engine.dispose()
 
 # Set up session middleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -44,6 +52,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["aut
 app.include_router(user.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
 app.include_router(practice.router, prefix=f"{settings.API_V1_STR}/practice", tags=["practice"])
+app.include_router(practice_session.router, prefix=f"{settings.API_V1_STR}/practice-sessions", tags=["practice_sessions"])
 app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", tags=["challenge"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])

@@ -30,7 +30,6 @@ async def create_drill_group(
     *,
     db: AsyncSession = Depends(get_db),
     drill_group_in: DrillGroupCreate,
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """
     Create a new drill group.
@@ -42,29 +41,32 @@ async def create_drill_group(
     - tags: Optional list of tags for categorization
     - difficulty: Optional difficulty level (1-5)
     """
-    # No user ID required
-    user_id = None
+    print(f"[API] Creating drill group with data: {drill_group_in.model_dump()}")
     
-    # Create the drill group with the user ID (which may be None)
+    # Create the drill group
     try:
         drill_group = await crud_drill_group.create(
-            db=db, 
+            db=db,
             obj_in=drill_group_in,
-            user_id=user_id
+            user_id=1  # Default to user ID 1 for simplicity
         )
+        print(f"[API] Created drill group result: {drill_group.__dict__}")
+        
         # Return a serializable response
-        return {
-            "id": drill_group.id,
-            "user_id": drill_group.user_id,
-            "name": drill_group.name,
-            "description": drill_group.description,
-            "is_public": getattr(drill_group, "is_public", True),
-            "difficulty": getattr(drill_group, "difficulty", 1),
-            "tags": getattr(drill_group, "tags", []),
-            "created_at": drill_group.created_at,
-            "updated_at": drill_group.updated_at
-        }
+        return DrillGroupInDBBase(
+            id=drill_group.id,
+            user_id=drill_group.user_id,
+            name=drill_group.name,
+            description=drill_group.description,
+            image=drill_group.image,  # Explicitly include image
+            is_public=getattr(drill_group, "is_public", True),
+            difficulty=getattr(drill_group, "difficulty", 1),
+            tags=getattr(drill_group, "tags", []),
+            created_at=drill_group.created_at,
+            updated_at=drill_group.updated_at
+        )
     except Exception as e:
+        print(f"Error creating drill group: {str(e)}")  # Debug log
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Could not create drill group: {str(e)}"
@@ -93,7 +95,6 @@ async def update_drill_group(
     db: AsyncSession = Depends(get_db),
     drill_group_id: int = Path(..., description="ID of the drill group to update"),
     drill_group_in: DrillGroupUpdate,
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """Update a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -102,8 +103,6 @@ async def update_drill_group(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drill group not found"
         )
-    
-    # No authorization check - anyone can update a drill group
     
     drill_group = await crud_drill_group.update(
         db=db, db_obj=drill_group, obj_in=drill_group_in
@@ -116,7 +115,6 @@ async def delete_drill_group(
     *,
     db: AsyncSession = Depends(get_db),
     drill_group_id: int = Path(..., description="ID of the drill group to delete"),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """Delete a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -125,8 +123,6 @@ async def delete_drill_group(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drill group not found"
         )
-    
-    # No authorization check - anyone can delete a drill group
     
     drill_group = await crud_drill_group.remove(db=db, drill_group_id=drill_group_id)
     return drill_group

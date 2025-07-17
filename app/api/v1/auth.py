@@ -97,62 +97,59 @@ async def logout(request: Request):
     request.session.clear()
     return {"status": "success", "message": "Successfully logged out"}
 
-@router.post("/request-otp", response_model=PhoneVerificationResponse)
+@router.post(
+    "/request-otp",
+    response_model=PhoneVerificationResponse,
+    tags=["auth"],
+    summary="Request OTP for login/registration"
+)
 async def request_otp(
-    phone_number: str,
+    payload: PhoneNumberRequest,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Request OTP for login/registration
+    Request OTP for login/registration.
     """
-    # For now, always return static OTP
+    phone_number = payload.phone_number
     static_otp = "0000"
-    
-    # Check if user exists
     user = await crud_user.get_by_phone(db, phone_number=phone_number)
-    
     if user:
-        # Store OTP for existing user
         await crud_user.update_otp(db, user=user, otp=static_otp)
     else:
-        # Create a temporary user with just phone and OTP
         user_data = UserCreate(
-            email=f"temp_{phone_number}@temp.com",  # temporary email
-            username=f"temp_{phone_number}",  # temporary username
-            password="temp_password",  # temporary password
+            email=f"temp_{phone_number}@temp.com",
+            username=f"temp_{phone_number}",
+            password="temp_password",
             phone_number=phone_number,
             full_name="Temporary User"
         )
         user = await crud_user.create(db, obj_in=user_data)
         await crud_user.update_otp(db, user=user, otp=static_otp)
-    
     return {"message": "OTP sent successfully", "success": True}
 
-@router.post("/verify-otp", response_model=OTPVerificationResponse)
+@router.post(
+    "/verify-otp",
+    response_model=OTPVerificationResponse,
+    tags=["auth"],
+    summary="Verify OTP and return user status"
+)
 async def verify_otp(
     request: Request,
     verify_data: OTPVerify,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Verify OTP and return user status
+    Verify OTP and return user status.
     """
     user = await crud_user.get_by_phone(db, phone_number=verify_data.phone_number)
-    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
-    # Verify OTP
     if user.otp == verify_data.otp:
-        # Clear OTP after successful verification
         await crud_user.update_otp(db, user=user, otp=None)
-        
-        # Check if this is the first time (temporary user)
         is_new_user = user.username.startswith("temp_")
-        
         return {
             "message": "OTP verified successfully",
             "success": True,
@@ -164,7 +161,6 @@ async def verify_otp(
                 "email": None if is_new_user else user.email
             }
         }
-    
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="Invalid OTP"

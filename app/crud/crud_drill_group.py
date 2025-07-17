@@ -58,19 +58,33 @@ async def create(
     user_id: Optional[int] = None
 ) -> DrillGroup:
     """Create a new drill group"""
-    # Create the basic drill group
-    db_obj = DrillGroup(
-        user_id=user_id,
-        name=obj_in.name,
-        description=obj_in.description,
-        # We could store these in JSON columns or separate tables
-        is_public=getattr(obj_in, "is_public", True),
-        difficulty=getattr(obj_in, "difficulty", 1),
-        tags=getattr(obj_in, "tags", [])
+    from sqlalchemy import insert
+    
+    print(f"[CRUD] Creating drill group with obj_in: {obj_in.model_dump()}")
+    
+    # Prepare insert data
+    insert_data = {
+        "user_id": user_id,
+        "name": obj_in.name,
+        "description": obj_in.description,
+        "image": obj_in.image,
+        "is_public": getattr(obj_in, "is_public", True),
+        "difficulty": getattr(obj_in, "difficulty", 1),
+        "tags": getattr(obj_in, "tags", [])
+    }
+    
+    print(f"[CRUD] Prepared insert data: {insert_data}")
+    
+    # Create using explicit insert
+    result = await db.execute(
+        insert(DrillGroup)
+        .values(**insert_data)
+        .returning(DrillGroup)
     )
-    db.add(db_obj)
+    db_obj = result.scalar_one()
+    print(f"[CRUD] Created drill group object: {db_obj.__dict__}")
     await db.commit()
-    await db.refresh(db_obj)
+    print(f"[CRUD] After commit, drill group object: {db_obj.__dict__}")
     
     # Add drills to the group if provided
     if hasattr(obj_in, "drill_ids") and obj_in.drill_ids:
@@ -88,7 +102,7 @@ async def create(
         if valid_drills:
             db_obj.drills = valid_drills
             await db.commit()
-        
+            
     await db.refresh(db_obj)
     return db_obj
 

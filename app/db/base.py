@@ -14,6 +14,7 @@ from app.db.models.session import Session  # noqa
 from app.db.models.drill import Drill  # noqa
 from app.db.models.shot import Shot  # noqa
 from app.db.models.drill_group import DrillGroup, DrillGroupDrills  # noqa
+from app.db.models.practice_session import PracticeSession  # noqa
 
 # Check if we're using psycopg2 (sync) or asyncpg (async)
 if 'psycopg2' in settings.DATABASE_URL:
@@ -38,18 +39,27 @@ else:
     else:
         db_url = settings.DATABASE_URL
     
-    # Create async engine for the database
+    # Create async engine for the database with connection pooling
     engine = create_async_engine(
         db_url,
         echo=True,
         future=True,
+        pool_pre_ping=True,  # Verify connection is still alive
+        pool_size=20,  # Maximum number of connections in pool
+        max_overflow=10,  # Maximum number of connections that can be created beyond pool_size
     )
     
     # Create async session factory
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False
+    )
 
 
-async def get_db() -> AsyncGenerator[Any, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency for getting database sessions (either async or sync)
     """

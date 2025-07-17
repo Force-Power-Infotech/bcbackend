@@ -27,3 +27,4 @@ class User(Base):
     sent_challenges = relationship("Challenge", back_populates="sender", foreign_keys="Challenge.sender_id")
     drill_groups = relationship("DrillGroup", back_populates="user")
     received_challenges = relationship("Challenge", back_populates="recipient", foreign_keys="Challenge.recipient_id")
+    practice_sessions = relationship("PracticeSession", back_populates="user")

@@ -4,7 +4,7 @@ Run with: python -m scripts.create_admin_user
 """
 import asyncio
 import sys
-from getpass import getpass
+import os
 
 sys.path.append(".")
 
@@ -16,21 +16,11 @@ from app.db.base import Base, engine, get_db, async_session
 async def create_admin_user():
     print("Creating first admin user")
     
-    # Get user input
-    email = input("Email: ")
-    username = input("Username: ")
-    full_name = input("Full name: ")
-    password = getpass("Password: ")
-    confirm_password = getpass("Confirm password: ")
-    
-    # Validate input
-    if password != confirm_password:
-        print("Passwords don't match")
-        return
-    
-    if len(password) < 8:
-        print("Password must be at least 8 characters long")
-        return
+    # Use environment variables or defaults
+    email = os.getenv("ADMIN_EMAIL", "admin@bowlsace.com")
+    username = os.getenv("ADMIN_USERNAME", "admin")
+    full_name = os.getenv("ADMIN_FULL_NAME", "Admin User")
+    password = os.getenv("ADMIN_PASSWORD", "adminpassword123")
     
     async with async_session() as db:
         # Check if user exists

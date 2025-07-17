@@ -36,11 +36,9 @@ RUN npm ci
 # Build Tailwind CSS
 RUN npm run build:css && npm cache clean --force
 
-# Create non-root user
-RUN adduser --disabled-password --gecos "" appuser && \
-    chown -R appuser:appuser /app && \
-    chmod +x /usr/local/bin/wait-for-it.sh
-USER appuser
+# Set permissions and create directories
+RUN chmod +x /usr/local/bin/wait-for-it.sh && \
+    chmod +x /app/scripts/startup.sh
 
 EXPOSE 8000
 

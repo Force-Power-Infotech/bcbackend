@@ -17,6 +17,7 @@ class DrillGroup(Base):
     tags = Column(JSON, nullable=True, server_default='[]')
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    image = Column(String(255), nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="drill_groups")

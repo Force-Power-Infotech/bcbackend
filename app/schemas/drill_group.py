@@ -8,6 +8,7 @@ from .drill import Drill
 class DrillGroupBase(BaseModel):
     name: str = Field(..., description="Name of the drill group")
     description: Optional[str] = Field(None, description="Description of the drill group")
+    image: Optional[str] = Field(None, description="URL of the drill group image")
 
 
 class DrillGroupCreate(DrillGroupBase):
@@ -20,11 +21,12 @@ class DrillGroupCreate(DrillGroupBase):
 class DrillGroupUpdate(DrillGroupBase):
     name: Optional[str] = None
     description: Optional[str] = None
+    image: Optional[str] = None
 
 
 class DrillGroupInDBBase(DrillGroupBase):
     id: int
-    user_id: Optional[int] = Field(default=None)
+    user_id: Optional[int] = Field(default=1)  # Default to user ID 1
     is_public: bool = Field(default=True)
     difficulty: Optional[int] = Field(default=1)
     tags: Optional[List[str]] = Field(default=[])
