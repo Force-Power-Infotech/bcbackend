@@ -32,14 +32,16 @@ async def read_sessions(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: Optional[User] = Depends(deps.get_optional_current_user),
 ) -> Any:
     """
-    Get all practice sessions for current user.
+    Get all practice sessions. If user is authenticated, returns their sessions.
+    If not authenticated, returns all public sessions.
     """
-    sessions = await crud_practice.get_by_user(
-        db, user_id=current_user.id, skip=skip, limit=limit
-    )
+    if current_user:
+        sessions = await crud_practice.get_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
+    else:
+        sessions = await crud_practice.get_multi(db, skip=skip, limit=limit)
     return sessions
 
 

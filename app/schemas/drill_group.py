@@ -24,9 +24,9 @@ class DrillGroupUpdate(DrillGroupBase):
 
 class DrillGroupInDBBase(DrillGroupBase):
     id: int
-    user_id: Optional[int] = None
-    is_public: bool = True
-    difficulty: Optional[int] = 1
+    user_id: Optional[int] = Field(default=None)
+    is_public: bool = Field(default=True)
+    difficulty: Optional[int] = Field(default=1)
     tags: Optional[List[str]] = Field(default=[])
     created_at: datetime
     updated_at: Optional[datetime] = None

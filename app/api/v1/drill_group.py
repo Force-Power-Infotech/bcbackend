@@ -42,8 +42,8 @@ async def create_drill_group(
     - tags: Optional list of tags for categorization
     - difficulty: Optional difficulty level (1-5)
     """
-    # Use current user's ID if authenticated, else get admin or None
-    user_id = current_user.id if current_user else await crud_drill_group.get_admin_user_id(db)
+    # No user ID required
+    user_id = None
     
     # Create the drill group with the user ID (which may be None)
     try:
@@ -103,12 +103,7 @@ async def update_drill_group(
             detail="Drill group not found"
         )
     
-    # Check permissions - only owner or admin can update unless it's a public group with no owner
-    if drill_group.user_id is not None and (current_user is None or drill_group.user_id != current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this drill group"
-        )
+    # No authorization check - anyone can update a drill group
     
     drill_group = await crud_drill_group.update(
         db=db, db_obj=drill_group, obj_in=drill_group_in
@@ -131,12 +126,7 @@ async def delete_drill_group(
             detail="Drill group not found"
         )
     
-    # Only owner can delete unless it's a public group with no owner
-    if drill_group.user_id is not None and (current_user is None or drill_group.user_id != current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this drill group"
-        )
+    # No authorization check - anyone can delete a drill group
     
     drill_group = await crud_drill_group.remove(db=db, drill_group_id=drill_group_id)
     return drill_group
@@ -148,7 +138,6 @@ async def add_drill_to_group(
     db: AsyncSession = Depends(get_db),
     drill_group_id: int = Path(..., description="ID of the drill group"),
     drill_id: int = Path(..., description="ID of the drill to add"),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """Add a drill to a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -156,13 +145,6 @@ async def add_drill_to_group(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drill group not found"
-        )
-    
-    # Only owner can modify unless it's a public group with no owner
-    if drill_group.user_id is not None and (current_user is None or drill_group.user_id != current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this drill group"
         )
     
     drill = await crud_drill.get(db, drill_id=drill_id)
@@ -184,7 +166,6 @@ async def remove_drill_from_group(
     db: AsyncSession = Depends(get_db),
     drill_group_id: int = Path(..., description="ID of the drill group"),
     drill_id: int = Path(..., description="ID of the drill to remove"),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """Remove a drill from a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -193,8 +174,6 @@ async def remove_drill_from_group(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Drill group not found"
         )
-    
-    # Only owner can modify unless it's a public group with no owner
     if drill_group.user_id is not None and (current_user is None or drill_group.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -223,12 +202,7 @@ async def update_drill_group_drills(
             detail="Drill group not found"
         )
     
-    # Only owner can modify unless it's a public group with no owner
-    if drill_group.user_id is not None and (current_user is None or drill_group.user_id != current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this drill group"
-        )
+    # No authorization check - anyone can modify drill groups
     
     # Verify all drills exist
     drills = []

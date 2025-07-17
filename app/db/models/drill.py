@@ -2,22 +2,24 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, T
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class Drill(Base):
     __tablename__ = "drills"
     
     id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True)  # Made nullable for template drills
-    name = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    target_score = Column(Integer)  # Expected performance threshold
-    difficulty = Column(Integer)  # 1-10 scale
-    drill_type = Column(String, nullable=False)  # Type of drill (DRAW, DRIVE, etc.)
-    duration_minutes = Column(Integer, nullable=False)  # Duration in minutes
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-      # Relationships
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    difficulty = Column(Integer, nullable=False, server_default='1')
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    session_id = Column(Integer, ForeignKey('sessions.id', ondelete='CASCADE'), nullable=True)
+    target_score = Column(Integer, nullable=True)
+    drill_type = Column(String(50), nullable=False)
+    duration_minutes = Column(Integer, nullable=True)
+
+    # Relationships
     session = relationship("Session", back_populates="drills")
-    shots = relationship("Shot", back_populates="drill")
     drill_groups = relationship("DrillGroup", secondary="drill_group_drills", back_populates="drills")
+    shots = relationship("Shot", back_populates="drill", cascade="all, delete-orphan")

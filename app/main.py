@@ -20,8 +20,10 @@ app = FastAPI(
 from starlette.middleware.sessions import SessionMiddleware
 app.add_middleware(
     SessionMiddleware,
-    secret_key="your-secret-key-here",  # Replace with a secure secret key
+    secret_key=settings.SECRET_KEY,  # Use secret key from settings
     session_cookie="bowlsace_session",
+    same_site="lax",  # Protects against CSRF
+    https_only=settings.ENV == "production",  # Only use HTTPS in production
     max_age=86400  # 24 hours
 )
 

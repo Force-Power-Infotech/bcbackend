@@ -3,12 +3,17 @@ import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session
 
 from app.core.config import settings
 
-# Create SQLAlchemy base
-Base = declarative_base()
+# Import Base and all models to ensure they are registered
+from .base_class import Base  # noqa
+from app.db.models.user import User  # noqa
+from app.db.models.session import Session  # noqa
+from app.db.models.drill import Drill  # noqa
+from app.db.models.shot import Shot  # noqa
+from app.db.models.drill_group import DrillGroup, DrillGroupDrills  # noqa
 
 # Check if we're using psycopg2 (sync) or asyncpg (async)
 if 'psycopg2' in settings.DATABASE_URL:
