@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+import logging.config
 
 from app.core.config import settings
+from app.core.logging_config import setup_logging
+
+# Setup logging configuration
+logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))
 from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, admin, drill_group, drill
 from app.admin import routes as admin_routes
 

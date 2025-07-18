@@ -12,6 +12,16 @@ services:
       PYTHONDONTWRITEBYTECODE: 1
       PYTHONUNBUFFERED: 1
       TZ: UTC
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: nobody
     depends_on:
       db:
         condition: service_healthy
@@ -20,6 +30,13 @@ services:
       - .:/app
       - /app/node_modules
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+        labels: "production"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -42,13 +59,27 @@ services:
     environment:
       TZ: UTC
       PGDATA: /var/lib/postgresql/data/pgdata
+    security_opt:
+      - no-new-privileges:true
+    user: postgres
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres:/docker-entrypoint-initdb.d
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+        labels: "production"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d bowlsacedb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,3 +98,8 @@ networks:
 volumes:
   postgres_data:
     name: bowlsace_postgres_data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/postgres
