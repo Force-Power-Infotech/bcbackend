@@ -4,9 +4,9 @@ from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 
-
+n6G?e@Z9)kB2
 class Session(Base):
-    __tablename__ = "sessions"
+    __tablename__ = "practice_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
