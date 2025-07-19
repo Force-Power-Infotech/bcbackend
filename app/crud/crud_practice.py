@@ -5,59 +5,59 @@ from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models.session import Session
+from app.db.models.practice_session import PracticeSession
 from app.db.models.shot import Shot
 from app.db.models.drill import Drill
 from app.db.models.user import User
 from app.schemas.session import SessionCreate, SessionUpdate
 
 
-async def get(db: AsyncSession, session_id: int) -> Optional[Session]:
+async def get(db: AsyncSession, session_id: int) -> Optional[PracticeSession]:
     result = await db.execute(
-        select(Session).where(Session.id == session_id)
+        select(PracticeSession).where(PracticeSession.id == session_id)
     )
     return result.scalars().first()
 
 
-async def get_multi(db: AsyncSession, *, skip: int = 0, limit: int = 100) -> List[Session]:
+async def get_multi(db: AsyncSession, *, skip: int = 0, limit: int = 100) -> List[PracticeSession]:
     """Get all practice sessions."""
     result = await db.execute(
-        select(Session)
-        .order_by(Session.created_at.desc())
+        select(PracticeSession)
+        .order_by(PracticeSession.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
     return result.scalars().all()
 
 
-async def get_with_related(db: AsyncSession, session_id: int) -> Optional[Session]:
+async def get_with_related(db: AsyncSession, session_id: int) -> Optional[PracticeSession]:
     result = await db.execute(
-        select(Session)
-        .options(selectinload(Session.shots), selectinload(Session.drills))
-        .where(Session.id == session_id)
+        select(PracticeSession)
+        .options(selectinload(PracticeSession.shots), selectinload(PracticeSession.drills))
+        .where(PracticeSession.id == session_id)
     )
     return result.scalars().first()
 
 
 async def get_by_user(
     db: AsyncSession, user_id: int, *, skip: int = 0, limit: int = 100
-) -> List[Session]:
+) -> List[PracticeSession]:
     result = await db.execute(
-        select(Session)
-        .where(Session.user_id == user_id)
-        .order_by(Session.created_at.desc())
+        select(PracticeSession)
+        .where(PracticeSession.user_id == user_id)
+        .order_by(PracticeSession.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
     return result.scalars().all()
 
 
-async def create(db: AsyncSession, *, obj_in: SessionCreate, user_id: int) -> Session:
+async def create(db: AsyncSession, *, obj_in: SessionCreate, user_id: int) -> PracticeSession:
     """Create a new practice session with drill groups support"""
     # Start a transaction
     async with db.begin():
         # Create the session
-        db_obj = Session(
+        db_obj = PracticeSession(
             user_id=user_id,
             title=obj_in.title,
             description=obj_in.description,
@@ -97,18 +97,18 @@ async def create(db: AsyncSession, *, obj_in: SessionCreate, user_id: int) -> Se
 
 
 async def update(
-    db: AsyncSession, *, db_obj: Session, obj_in: Union[SessionUpdate, Dict[str, Any]]
-) -> Session:
+    db: AsyncSession, *, db_obj: PracticeSession, obj_in: Union[SessionUpdate, Dict[str, Any]]
+) -> PracticeSession:
     if isinstance(obj_in, dict):
         update_data = obj_in
     else:
         update_data = obj_in.dict(exclude_unset=True)
     
     stmt = (
-        update(Session)
-        .where(Session.id == db_obj.id)
+        update(PracticeSession)
+        .where(PracticeSession.id == db_obj.id)
         .values(**update_data)
-        .returning(Session)
+        .returning(PracticeSession)
     )
     
     result = await db.execute(stmt)
@@ -117,10 +117,10 @@ async def update(
     return result.scalars().first()
 
 
-async def delete_session(db: AsyncSession, *, session_id: int) -> Optional[Session]:
+async def delete_session(db: AsyncSession, *, session_id: int) -> Optional[PracticeSession]:
     session = await get(db, session_id)
     if session:
-        stmt = delete(Session).where(Session.id == session_id).returning(Session)
+        stmt = delete(PracticeSession).where(PracticeSession.id == session_id).returning(PracticeSession)
         result = await db.execute(stmt)
         await db.commit()
         return result.scalars().first()

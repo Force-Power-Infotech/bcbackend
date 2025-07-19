@@ -10,8 +10,7 @@ from app.core.logging_config import setup_logging
 
 # Setup logging configuration
 logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))
-from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, admin, drill_group, drill
-from app.admin import routes as admin_routes
+from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, drill_group, drill
 
 # Create FastAPI app
 app = FastAPI(
@@ -61,11 +60,7 @@ app.include_router(practice_session.router, prefix=f"{settings.API_V1_STR}/pract
 app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", tags=["challenge"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
-app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(drill_group.router, prefix=f"{settings.API_V1_STR}/drill-groups", tags=["drill_groups"])
-
-# Include Admin UI routes
-app.include_router(admin_routes.router, prefix="/admin", tags=["admin_ui"])
 
 
 # Health check endpoint

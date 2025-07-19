@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_db
-from app.db.models.session import Session
+from app.db.models.practice_session import PracticeSession
 from app.db.models.shot import Shot, ShotType
 from app.schemas.user import User
 from app.api import deps
@@ -45,8 +45,8 @@ async def get_advice_recommendations(
             func.avg(Shot.accuracy_score).label("avg_accuracy"),
             func.count(Shot.id).label("count")
         )
-        .join(Session, Shot.session_id == Session.id)
-        .where(Session.user_id == user_id)
+        .join(PracticeSession, Shot.session_id == PracticeSession.id)
+        .where(PracticeSession.user_id == user_id)
         .group_by(Shot.shot_type)
     )
     

@@ -10,7 +10,6 @@ from app.core.config import settings
 # Import Base and all models to ensure they are registered
 from .base_class import Base  # noqa
 from app.db.models.user import User  # noqa
-from app.db.models.session import Session  # noqa
 from app.db.models.drill import Drill  # noqa
 from app.db.models.shot import Shot  # noqa
 from app.db.models.drill_group import DrillGroup, DrillGroupDrills  # noqa

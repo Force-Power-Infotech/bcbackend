@@ -5,7 +5,7 @@ from sqlalchemy import func, select, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_db
-from app.db.models.session import Session
+from app.db.models.practice_session import PracticeSession
 from app.db.models.shot import Shot
 from app.db.models.drill import Drill
 from app.db.models.challenge import Challenge, ChallengeStatus
@@ -33,8 +33,8 @@ async def get_dashboard_metrics(
             detail="User not found",
         )
     
-    # Check permissions (only the user or an admin can see their own dashboard)
-    if user_id != current_user.id and not current_user.is_admin:
+    # Check permissions (users can only see their own dashboard)
+    if user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions",
@@ -42,7 +42,7 @@ async def get_dashboard_metrics(
     
     # Get session count
     session_count = await db.execute(
-        select(func.count(Session.id)).where(Session.user_id == user_id)
+        select(func.count(PracticeSession.id)).where(PracticeSession.user_id == user_id)
     )
     
     # Get shot metrics
@@ -51,8 +51,8 @@ async def get_dashboard_metrics(
             func.count(Shot.id).label("total_shots"),
             func.avg(Shot.accuracy_score).label("average_accuracy")
         )
-        .join(Session, Shot.session_id == Session.id)
-        .where(Session.user_id == user_id)
+        .join(PracticeSession, Shot.session_id == PracticeSession.id)
+        .where(PracticeSession.user_id == user_id)
     )
     
     shot_result = shot_metrics.first()
@@ -75,13 +75,13 @@ async def get_dashboard_metrics(
     # Get recent improvement trend (compare last 10 sessions)
     recent_shots = await db.execute(
         select(
-            Session.id,
+            PracticeSession.id,
             func.avg(Shot.accuracy_score).label("avg_accuracy")
         )
-        .join(Shot, Session.id == Shot.session_id)
-        .where(Session.user_id == user_id)
-        .group_by(Session.id)
-        .order_by(Session.created_at.desc())
+        .join(Shot, PracticeSession.id == Shot.session_id)
+        .where(PracticeSession.user_id == user_id)
+        .group_by(PracticeSession.id)
+        .order_by(PracticeSession.created_at.desc())
         .limit(10)
     )
     
