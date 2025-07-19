@@ -10,7 +10,7 @@ from app.core.logging_config import setup_logging
 
 # Setup logging configuration
 logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))
-from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, drill_group, drill
+from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, drill_group, drill, search
 
 # Create FastAPI app
 app = FastAPI(
@@ -61,6 +61,7 @@ app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", 
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
 app.include_router(drill_group.router, prefix=f"{settings.API_V1_STR}/drill-groups", tags=["drill_groups"])
+app.include_router(search.router, prefix=f"{settings.API_V1_STR}", tags=["search"])
 
 
 # Health check endpoint
