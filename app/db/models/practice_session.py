@@ -17,7 +17,7 @@ class PracticeSession(Base):
     # Relationships
     user = relationship("User", back_populates="practice_sessions")
     drill_group = relationship("DrillGroup")
-    drill = relationship("Drill")
+    drill = relationship("Drill", back_populates="practice_sessions", foreign_keys=[drill_id])
     
     # Define indexes for better performance
     __table_args__ = (
