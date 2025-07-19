@@ -61,7 +61,7 @@ app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", 
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
 app.include_router(drill_group.router, prefix=f"{settings.API_V1_STR}/drill-groups", tags=["drill_groups"])
-app.include_router(search.router, prefix=f"{settings.API_V1_STR}", tags=["search"])
+app.include_router(search.router, prefix=settings.API_V1_STR)
 
 
 # Health check endpoint
