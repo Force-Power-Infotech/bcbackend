@@ -17,6 +17,7 @@ class Drill(Base):
     target_score = Column(Integer, nullable=True)
     drill_type = Column(String(50), nullable=False)
     duration_minutes = Column(Integer, nullable=True)
+    session_id = Column(Integer, ForeignKey('practice_sessions.id', ondelete='SET NULL'), nullable=True)
 
     # Relationships
     practice_sessions = relationship("PracticeSession", back_populates="drill", foreign_keys="PracticeSession.drill_id")
