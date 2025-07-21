@@ -58,19 +58,19 @@ services:
       - .env
     environment:
       TZ: UTC
-      PGDATA: /var/lib/postgresql/data/pgdata
     security_opt:
       - no-new-privileges:true
-    user: postgres
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/run/postgresql
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -78,12 +78,6 @@ services:
         max-file: "3"
         tag: "{{.Name}}"
         labels: "production"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     deploy:
       resources:
         limits:
@@ -98,8 +92,3 @@ networks:
 volumes:
   postgres_data:
     name: bowlsace_postgres_data
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PWD}/data/postgres
