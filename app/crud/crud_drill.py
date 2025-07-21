@@ -35,7 +35,7 @@ async def get_multi(
         )
     
     # Apply difficulty filter
-    if difficulty:
+    if difficulty is not None:
         query = query.filter(Drill.difficulty == difficulty)
     
     # Apply pagination
@@ -61,7 +61,7 @@ async def get_count(
         )
     
     # Apply difficulty filter
-    if difficulty:
+    if difficulty is not None:
         query = query.filter(Drill.difficulty == difficulty)
     
     result = await db.execute(query)
@@ -70,19 +70,15 @@ async def get_count(
 
 async def create(db: AsyncSession, *, obj_in: DrillCreate) -> Drill:
     """Create a new drill"""
-    db_obj = Drill(
-        session_id=obj_in.session_id,
-        name=obj_in.name,
-        description=obj_in.description,
-        target_score=obj_in.target_score,
-        difficulty=obj_in.difficulty,
-        drill_type=obj_in.drill_type,
-        duration_minutes=obj_in.duration_minutes
-    )
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
+    try:
+        obj_data = obj_in.model_dump(exclude_unset=True)
+        db_obj = Drill(**obj_data)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+    except Exception as e:
+        raise ValueError(f"Could not create drill: {e}")
 
 
 async def update(db: AsyncSession, *, db_obj: Drill, obj_in: Union[DrillUpdate, Dict[str, Any]]) -> Drill:
@@ -122,19 +118,17 @@ async def get_template_drills(
     Get template drills (special drills not attached to specific sessions)
     that can be used as templates for creating new session drills
     """
-    # In a real implementation, you'd have a column like is_template to identify template drills
-    # For now, we'll simulate this by selecting drills from a specific template session ID
-    template_session_id = 0  # Special ID for template drills
-    
+    # Simulate template drills using session_id = 0
+    template_session_id = 0
+
     query = select(Drill).where(Drill.session_id == template_session_id)
     
-    # Apply type filter if provided
     if drill_type:
         query = query.filter(Drill.name.ilike(f"%{drill_type}%"))
     
-    # Apply difficulty range if provided
     if difficulty_min is not None:
         query = query.filter(Drill.difficulty >= difficulty_min)
+    
     if difficulty_max is not None:
         query = query.filter(Drill.difficulty <= difficulty_max)
     
