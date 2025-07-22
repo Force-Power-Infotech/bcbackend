@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "bowlsacedb")
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@db:5432/{POSTGRES_DB}"
+        f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@localhost:5432/{POSTGRES_DB}"
     )
     
     # For local development, use psycopg2 if specified in environment
