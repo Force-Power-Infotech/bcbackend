@@ -1,5 +1,7 @@
 # Python
 __pycache__/
+*/__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -19,6 +21,13 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pyc
+*.pyo
+*.pyd
+.Python
+.python-version
+.env
+.venv
 
 # Virtual Environment
 venv/
