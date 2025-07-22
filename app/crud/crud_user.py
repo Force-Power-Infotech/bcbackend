@@ -134,3 +134,20 @@ async def get_count(
     
     result = await db.execute(query)
     return result.scalar_one()
+
+
+async def get_all_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> list[UserModel]:
+    """
+    Get all users with pagination support.
+    
+    Args:
+        db: AsyncSession - The database session
+        skip: int - Number of users to skip (for pagination)
+        limit: int - Maximum number of users to return
+        
+    Returns:
+        List[UserModel]: List of users
+    """
+    query = select(UserModel).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()

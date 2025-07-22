@@ -10,7 +10,7 @@ from app.core.logging_config import setup_logging
 
 # Setup logging configuration
 logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))
-from app.api.v1 import auth, user, practice, practice_session, challenge, dashboard, advisor, drill_group, drill, search
+from app.api.v1 import auth, users, practice, practice_session, challenge, dashboard, advisor, drill_group, drill, search
 
 # Create FastAPI app
 app = FastAPI(
@@ -53,7 +53,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include API routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
-app.include_router(user.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
 app.include_router(practice.router, prefix=f"{settings.API_V1_STR}/practice", tags=["practice"])
 app.include_router(practice_session.router, prefix=f"{settings.API_V1_STR}/practice-sessions", tags=["practice_sessions"])
