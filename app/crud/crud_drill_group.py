@@ -16,7 +16,14 @@ async def get(db: AsyncSession, drill_group_id: int) -> Optional[DrillGroup]:
         .options(selectinload(DrillGroup.drills))
         .where(DrillGroup.id == drill_group_id)
     )
-    return result.scalars().first()
+    drill_group = result.scalars().first()
+    if drill_group:
+        # Convert difficulty to string
+        drill_group.difficulty = str(drill_group.difficulty or "1")
+        if drill_group.drills:
+            for drill in drill_group.drills:
+                drill.difficulty = str(drill.difficulty or "1")
+    return drill_group
 
 
 async def get_multi(
@@ -34,7 +41,15 @@ async def get_multi(
     
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    drill_groups = result.scalars().all()
+    
+    # Convert difficulty to string for all drill groups and their drills
+    for drill_group in drill_groups:
+        drill_group.difficulty = str(drill_group.difficulty or "1")
+        if drill_group.drills:
+            for drill in drill_group.drills:
+                drill.difficulty = str(drill.difficulty or "1")
+    return drill_groups
 
 
 async def get_drill_group_drills(
@@ -63,13 +78,17 @@ async def create(
     print(f"[CRUD] Creating drill group with obj_in: {obj_in.model_dump()}")
     
     # Prepare insert data
+    difficulty = getattr(obj_in, "difficulty", "1")
+    if isinstance(difficulty, str):
+        difficulty = int(difficulty)
+        
     insert_data = {
         "user_id": user_id,
         "name": obj_in.name,
         "description": obj_in.description,
         "image": obj_in.image,
         "is_public": getattr(obj_in, "is_public", True),
-        "difficulty": getattr(obj_in, "difficulty", 1),
+        "difficulty": difficulty,
         "tags": getattr(obj_in, "tags", [])
     }
     

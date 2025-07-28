@@ -44,10 +44,20 @@ class DrillInDBBase(DrillBase):
         from_attributes = True
 
     def __init__(self, **data):
+        if 'difficulty' in data:
+            if isinstance(data['difficulty'], int):
+                data['difficulty'] = str(data['difficulty'])
+            elif data['difficulty'] is None:
+                data['difficulty'] = "1"
+            elif isinstance(data['difficulty'], str):
+                # Ensure it's a valid integer string
+                try:
+                    int(data['difficulty'])
+                except ValueError:
+                    data['difficulty'] = "1"
+        else:
+            data['difficulty'] = "1"
         super().__init__(**data)
-        if hasattr(self, 'difficulty'):
-            self._difficulty = self.difficulty
-            self.difficulty = str(self._difficulty)
 
 
 class Drill(DrillInDBBase):

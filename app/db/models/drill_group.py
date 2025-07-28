@@ -12,10 +12,29 @@ class DrillGroup(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    
+    @property
+    def difficulty_str(self) -> str:
+        return str(self.difficulty or "1")
     is_public = Column(Boolean, nullable=False, server_default=sa.text('true'))
-    difficulty = Column(Integer, nullable=True)
+    _difficulty = Column('difficulty', Integer, nullable=True)
     tags = Column(JSON, nullable=True, server_default='[]')
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    
+    @property
+    def difficulty(self):
+        return str(self._difficulty) if self._difficulty is not None else "1"
+    
+    @difficulty.setter
+    def difficulty(self, value):
+        if isinstance(value, str):
+            self._difficulty = int(value)
+        else:
+            self._difficulty = value
+
+    @property
+    def difficulty_str(self):
+        return str(self.difficulty) if self.difficulty is not None else "1"
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     image = Column(String(255), nullable=True)
     
