@@ -18,5 +18,5 @@ os.environ["DATABASE_URL"] = "postgresql+psycopg2://postgres:postgres@localhost:
 os.environ["USE_SYNC_DB"] = "true"
 
 if __name__ == "__main__":
-    # Using port 8001 to avoid conflict with Docker container running on 8000
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=True)
+    # Using port 8000
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

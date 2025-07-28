@@ -17,22 +17,22 @@ depends_on = None
 
 
 def upgrade():
-    # Drop foreign keys first
-    op.drop_constraint('drill_group_drills_drill_group_id_fkey', 'drill_group_drills', type_='foreignkey')
-    op.drop_constraint('drill_group_drills_drill_id_fkey', 'drill_group_drills', type_='foreignkey')
+    # Check if the table exists first
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    table_exists = 'drill_group_drills' in inspector.get_table_names()
     
-    # Drop indexes if they exist
-    try:
-        op.drop_index('idx_drill_group_drills_drill_id', table_name='drill_group_drills')
-    except:
-        pass
-    try:
-        op.drop_index('idx_drill_group_drills_group_id', table_name='drill_group_drills')
-    except:
-        pass
-    
-    # Drop the table
-    op.drop_table('drill_group_drills')
+    if table_exists:
+        # Drop foreign keys first
+        for fk in inspector.get_foreign_keys('drill_group_drills'):
+            op.drop_constraint(fk['name'], 'drill_group_drills', type_='foreignkey')
+        
+        # Drop indexes if they exist
+        for idx in inspector.get_indexes('drill_group_drills'):
+            op.drop_index(idx['name'], table_name='drill_group_drills')
+        
+        # Drop the table
+        op.drop_table('drill_group_drills')
 
     # Create the new table with correct structure
     op.create_table(

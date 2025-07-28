@@ -7,4 +7,4 @@ parent_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(parent_dir))
 
 # Force a synchronous database URL for the migration
-os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@db:5432/bowlsacedb").replace("+asyncpg", "")
+os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "postgresql://bowlsace:supersecret@localhost:5432/bowlsacedb").replace("+asyncpg", "")

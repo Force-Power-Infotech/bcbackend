@@ -17,9 +17,6 @@ depends_on = None
 
 
 def upgrade():
-    # Add is_public column to drill_groups table
-    op.add_column('drill_groups', sa.Column('is_public', sa.Boolean(), nullable=False, server_default='false'))
-
     # Create drill_group_drills association table
     op.create_table(
         'drill_group_drills',
@@ -51,6 +48,3 @@ def downgrade():
 
     # Drop drill_group_drills table
     op.drop_table('drill_group_drills')
-
-    # Drop is_public column from drill_groups
-    op.drop_column('drill_groups', 'is_public')

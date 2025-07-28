@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, Field, model_validator
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from .drill import Drill
@@ -15,7 +15,17 @@ class DrillGroupCreate(DrillGroupBase):
     drill_ids: Optional[List[int]] = Field(default=[], description="List of drill IDs to add to the group")
     is_public: bool = Field(default=True, description="Whether the drill group is public")
     tags: Optional[List[str]] = Field(default=[], description="Tags for categorizing the drill group")
-    difficulty: Optional[int] = Field(default=1, ge=1, le=5, description="Difficulty level of the drill group")
+    difficulty: Optional[str] = Field(default="1", description="Difficulty level of the drill group")
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_difficulty(cls, data):
+        if isinstance(data, dict) and 'difficulty' in data:
+            if isinstance(data['difficulty'], int):
+                data['difficulty'] = str(data['difficulty'])
+            elif data['difficulty'] is None:
+                data['difficulty'] = "1"
+        return data
 
 
 class DrillGroupUpdate(DrillGroupBase):
@@ -28,7 +38,7 @@ class DrillGroupInDBBase(DrillGroupBase):
     id: int
     user_id: Optional[int] = Field(default=1)  # Default to user ID 1
     is_public: bool = Field(default=True)
-    difficulty: Optional[int] = Field(default=1)
+    difficulty: Optional[str] = Field(default="1")
     tags: Optional[List[str]] = Field(default=[])
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -36,6 +46,19 @@ class DrillGroupInDBBase(DrillGroupBase):
     class Config:
         from_attributes = True
 
+    def __init__(self, **data):
+        if 'difficulty' in data and data['difficulty'] is not None:
+            data['difficulty'] = str(data['difficulty'])
+        super().__init__(**data)
+
 
 class DrillGroup(DrillGroupInDBBase):
     drills: Optional[List[Drill]] = Field(default=[])
+    
+    @property
+    def difficulty(self) -> str:
+        return str(self._difficulty) if self._difficulty else "1"
+    
+    @difficulty.setter
+    def difficulty(self, value: Optional[int]):
+        self._difficulty = value if value is not None else 1

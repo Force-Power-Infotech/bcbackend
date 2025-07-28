@@ -1,7 +1,7 @@
 """Add image column to drill_groups
 
 Revision ID: add_image_column
-Revises: merge_all_drill_group_heads
+Revises: add_is_public_column
 Create Date: 2025-06-05 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_image_column'
-down_revision = 'merge_all_drill_group_heads'
+down_revision = 'add_is_public_column'
 branch_labels = None
 depends_on = None
 

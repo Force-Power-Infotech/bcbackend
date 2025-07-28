@@ -2,6 +2,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
+
 # Import our synchronous connection setup (before any other imports)
 import sys
 from pathlib import Path
@@ -54,17 +55,9 @@ def do_run_migrations(connection):
 
 def run_migrations_online():
     """Run migrations in 'online' mode."""
-    config_section = config.get_section(config.config_ini_section)
-    url = config_section.get("sqlalchemy.url")
-    
-    # Replace +asyncpg with standard postgres for alembic
-    if "asyncpg" in url:
-        url = url.replace("+asyncpg", "")
-    
-    configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = url
+    url = config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
-        configuration,
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         future=True,

@@ -15,9 +15,9 @@ class PracticeSession(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     # Relationships
-    user = relationship("User", back_populates="practice_sessions")
-    drill_group = relationship("DrillGroup")
-    drill = relationship("Drill", back_populates="practice_sessions", foreign_keys=[drill_id])
+    user = relationship("User", back_populates="practice_sessions", lazy="joined")
+    drill_group = relationship("DrillGroup", lazy="joined")
+    drill = relationship("Drill", back_populates="practice_sessions", foreign_keys=[drill_id], lazy="joined")
     
     # Define indexes for better performance
     __table_args__ = (
