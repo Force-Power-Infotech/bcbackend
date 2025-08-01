@@ -1,3 +1,13 @@
+from app.db.base_class import Base
+
+class DrillGroupDrills(Base):
+    __tablename__ = "drill_group_drills"
+    drill_group_id = Column(Integer, ForeignKey("drill_groups.id", ondelete="CASCADE"), nullable=False, primary_key=True)
+    drill_id = Column(Integer, ForeignKey("drills.id", ondelete="CASCADE"), nullable=False, primary_key=True)
+    __table_args__ = (
+        Index('idx_drill_group_drills_drill_id', 'drill_id'),
+        Index('idx_drill_group_drills_group_id', 'drill_group_id'),
+    )
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON, Index, sql as sa
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -7,53 +17,20 @@ from app.db.base import Base
 
 class DrillGroup(Base):
     __tablename__ = "drill_groups"
-    
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    
-    @property
-    def difficulty_str(self) -> str:
-        return str(self.difficulty or "1")
     is_public = Column(Boolean, nullable=False, server_default=sa.text('true'))
-    _difficulty = Column('difficulty', Integer, nullable=True)
+    difficulty = Column(Integer, nullable=True)
     tags = Column(JSON, nullable=True, server_default='[]')
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    
-    @property
-    def difficulty(self):
-        return str(self._difficulty) if self._difficulty is not None else "1"
-    
-    @difficulty.setter
-    def difficulty(self, value):
-        if isinstance(value, str):
-            self._difficulty = int(value)
-        else:
-            self._difficulty = value
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    image = Column(String(255), nullable=True)
+
+    user = relationship("User", back_populates="drill_groups")
+    drills = relationship("Drill", secondary="drill_group_drills", back_populates="drill_groups")
 
     @property
     def difficulty_str(self):
         return str(self.difficulty) if self.difficulty is not None else "1"
-    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
-    image = Column(String(255), nullable=True)
-    
-    # Relationships
-    user = relationship("User", back_populates="drill_groups")
-    drills = relationship("Drill", secondary="drill_group_drills", back_populates="drill_groups")
-    
-    class Config:
-        from_attributes = True
-
-
-class DrillGroupDrills(Base):
-    __tablename__ = "drill_group_drills"
-    
-    drill_group_id = Column(Integer, ForeignKey("drill_groups.id", ondelete="CASCADE"), nullable=False, primary_key=True)
-    drill_id = Column(Integer, ForeignKey("drills.id", ondelete="CASCADE"), nullable=False, primary_key=True)
-    
-    # Define indexes for better performance
-    __table_args__ = (
-        Index('idx_drill_group_drills_drill_id', 'drill_id'),
-        Index('idx_drill_group_drills_group_id', 'drill_group_id'),
-    )
