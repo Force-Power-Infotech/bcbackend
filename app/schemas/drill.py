@@ -3,6 +3,8 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 
+from uuid import UUID
+
 class DrillBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -36,7 +38,7 @@ class DrillUpdate(DrillBase):
 
 
 class DrillInDBBase(DrillBase):
-    id: int
+    id: UUID
     session_id: Optional[int] = None
     created_at: datetime
 

@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from uuid import UUID
 
 
 class PracticeSessionCreate(BaseModel):
-    drill_group_id: int
-    drill_ids: List[int]
-    user_id: int
+    drill_group_id: UUID
+    drill_ids: List[UUID]
+    user_id: UUID  # ✅ Corrected to UUID
 
 
 from app.schemas.drill import Drill
@@ -16,9 +17,9 @@ from app.schemas.user import User
 
 class PracticeSessionResponse(BaseModel):
     id: int
-    user_id: int
-    drill_group_id: int
-    drill_id: int
+    user_id: UUID  # ✅ Corrected to UUID
+    drill_group_id: UUID
+    drill_id: UUID
     created_at: datetime
 
     class Config:
@@ -27,9 +28,9 @@ class PracticeSessionResponse(BaseModel):
 
 class PracticeSessionDetailResponse(BaseModel):
     id: int
-    user_id: int
-    drill_group_id: int
-    drill_id: int
+    user_id: UUID  # ✅ Corrected to UUID
+    drill_group_id: UUID
+    drill_id: UUID
     created_at: datetime
     drill: Optional[Drill] = None
     drill_group: Optional[DrillGroup] = None

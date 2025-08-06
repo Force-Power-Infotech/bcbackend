@@ -14,6 +14,7 @@ from app.db.models.drill import Drill  # noqa
 from app.db.models.shot import Shot  # noqa
 from app.db.models.drill_group import DrillGroup, DrillGroupDrills  # noqa
 from app.db.models.practice_session import PracticeSession  # noqa
+from app.db.models.meta_drill_group import MetaDrillGroup  # noqa
 
 # Check if we're using psycopg2 (sync) or asyncpg (async)
 if 'psycopg2' in settings.DATABASE_URL:

@@ -1,17 +1,18 @@
 from sqlalchemy import Column, Integer, DateTime, ForeignKey, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-
+from sqlalchemy.dialects.postgresql import UUID
+from uuid import uuid4
 from app.db.base import Base
 
 
 class PracticeSession(Base):
     __tablename__ = "practice_sessions"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    drill_group_id = Column(Integer, ForeignKey("drill_groups.id", ondelete="CASCADE"), nullable=False)
-    drill_id = Column(Integer, ForeignKey("drills.id", ondelete="CASCADE"), nullable=False)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    drill_group_id = Column(UUID(as_uuid=True), ForeignKey("drill_groups.id", ondelete="CASCADE"), nullable=False)
+    drill_id = Column(UUID(as_uuid=True), ForeignKey("drills.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     # Relationships

@@ -1,4 +1,5 @@
 from typing import Any, List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,7 +78,7 @@ async def create_drill_group(
 async def get_drill_group(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group to get"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group to get"),
 ) -> Any:
     """Get a specific drill group by ID."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -93,7 +94,7 @@ async def get_drill_group(
 async def update_drill_group(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group to update"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group to update"),
     drill_group_in: DrillGroupUpdate,
 ) -> Any:
     """Update a drill group."""
@@ -114,7 +115,7 @@ async def update_drill_group(
 async def delete_drill_group(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group to delete"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group to delete"),
 ) -> Any:
     """Delete a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -132,8 +133,8 @@ async def delete_drill_group(
 async def add_drill_to_group(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group"),
-    drill_id: int = Path(..., description="ID of the drill to add"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group"),
+    drill_id: UUID = Path(..., description="ID of the drill to add"),
 ) -> Any:
     """Add a drill to a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -160,8 +161,8 @@ async def add_drill_to_group(
 async def remove_drill_from_group(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group"),
-    drill_id: int = Path(..., description="ID of the drill to remove"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group"),
+    drill_id: UUID = Path(..., description="ID of the drill to remove"),
 ) -> Any:
     """Remove a drill from a drill group."""
     drill_group = await crud_drill_group.get(db, drill_group_id=drill_group_id)
@@ -186,8 +187,8 @@ async def remove_drill_from_group(
 async def update_drill_group_drills(
     *,
     db: AsyncSession = Depends(get_db),
-    drill_group_id: int = Path(..., description="ID of the drill group to update"),
-    drill_ids: List[int] = Query(..., description="List of drill IDs to set for the group"),
+    drill_group_id: UUID = Path(..., description="ID of the drill group to update"),
+    drill_ids: List[UUID] = Query(..., description="List of drill IDs to set for the group"),
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ) -> Any:
     """Update the drills in a drill group."""

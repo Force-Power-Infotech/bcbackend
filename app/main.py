@@ -10,7 +10,7 @@ from app.core.logging_config import setup_logging
 
 # Setup logging configuration
 logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))
-from app.api.v1 import auth, users, practice, practice_session, challenge, dashboard, advisor, drill_group, drill, search
+from app.api.v1 import auth, users, practice_session, dashboard, drill_group, drill, search, meta_drill_group, sub_drill
 
 # Create FastAPI app
 app = FastAPI(
@@ -55,13 +55,12 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(drill.router, prefix=f"{settings.API_V1_STR}/drill", tags=["drill"])
-app.include_router(practice.router, prefix=f"{settings.API_V1_STR}/practice", tags=["practice"])
 app.include_router(practice_session.router, prefix=f"{settings.API_V1_STR}/practice-sessions", tags=["practice_sessions"])
-app.include_router(challenge.router, prefix=f"{settings.API_V1_STR}/challenge", tags=["challenge"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
-app.include_router(advisor.router, prefix=f"{settings.API_V1_STR}/advisor", tags=["advisor"])
 app.include_router(drill_group.router, prefix=f"{settings.API_V1_STR}/drill-groups", tags=["drill_groups"])
 app.include_router(search.router, prefix=settings.API_V1_STR)
+app.include_router(meta_drill_group.router, prefix=f"{settings.API_V1_STR}/meta-drill-groups", tags=["meta_drill_groups"])
+app.include_router(sub_drill.router, prefix=f"{settings.API_V1_STR}/sub-drills", tags=["sub_drills"])
 
 
 # Health check endpoint

@@ -3,6 +3,8 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.postgresql import UUID
+import sqlalchemy as sa
 
 from app.db.base_class import Base
 
@@ -10,7 +12,7 @@ from app.db.base_class import Base
 class Drill(Base):
     __tablename__ = "drills"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()'))
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     _difficulty = Column('difficulty', Integer, nullable=False, server_default='1')
@@ -34,7 +36,7 @@ class Drill(Base):
         return str(self.difficulty) if self.difficulty is not None else "1"
     drill_type = Column(String(50), nullable=False)
     duration_minutes = Column(Integer, nullable=True)
-    session_id = Column(Integer, ForeignKey('practice_sessions.id', ondelete='SET NULL'), nullable=True)
+    session_id = Column(Integer, ForeignKey('practice_sessions.id', ondelete='SET NULL', use_alter=True), nullable=True)
 
     # Relationships
     practice_sessions = relationship("PracticeSession", back_populates="drill", foreign_keys="PracticeSession.drill_id")

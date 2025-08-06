@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Any
 from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
 from app.db.models.practice_session import PracticeSession
 from app.db.models.drill_group import DrillGroup
@@ -11,8 +12,8 @@ from app.db.models.user import User
 async def create_practice_sessions(
     db: AsyncSession, 
     user_id: int,
-    drill_group_id: int,
-    drill_ids: List[int]
+    drill_group_id: UUID,
+    drill_ids: List[UUID]
 ) -> List[PracticeSession]:
     """Create multiple practice session entries."""
     
@@ -72,7 +73,7 @@ async def get_user_practice_sessions(
 
 async def get_drill_group_practice_sessions(
     db: AsyncSession,
-    drill_group_id: int,
+    drill_group_id: UUID,
     skip: int = 0,
     limit: int = 100
 ) -> List[PracticeSession]:

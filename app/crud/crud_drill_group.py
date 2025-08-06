@@ -141,6 +141,13 @@ async def update(
     else:
         update_data = obj_in.dict(exclude_unset=True)
     
+    # Handle difficulty conversion from string to int
+    if 'difficulty' in update_data:
+        try:
+            update_data['difficulty'] = int(update_data['difficulty'])
+        except (ValueError, TypeError):
+            update_data['difficulty'] = 1
+    
     for field in update_data:
         setattr(db_obj, field, update_data[field])
     

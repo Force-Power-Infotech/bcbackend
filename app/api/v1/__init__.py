@@ -1,1 +1,1 @@
-from . import auth, users, practice, practice_session, challenge, dashboard, advisor, drill_group, drill, search
+from . import auth, users, practice_session, dashboard, drill_group, drill, search
