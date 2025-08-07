@@ -13,19 +13,13 @@ router = APIRouter()
 @router.get("/", response_model=List[User])
 async def get_all_users(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, le=100),
 ) -> Any:
     """
     Get all users with pagination.
-    Only accessible by admin users.
+    Publicly accessible.
     """
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
     users = await crud_user.get_all_users(db, skip=skip, limit=limit)
     return users
 
