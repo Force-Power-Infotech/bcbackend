@@ -7,7 +7,6 @@ from sqlalchemy.future import select
 from app.db.base import get_db
 from app.db.models.drill import Drill
 from app.db.models.drill_group import DrillGroup
-from app.schemas.search import SearchResponse, SearchResult
 
 # Create router instance
 router = APIRouter(
