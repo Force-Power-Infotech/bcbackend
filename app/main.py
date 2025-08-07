@@ -5,8 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging.config
 
-from app.core.config import settings
-from app.core.logging_config import setup_logging
 
 # Setup logging configuration
 logging.config.dictConfig(setup_logging(level="INFO" if settings.ENV == "production" else "DEBUG"))

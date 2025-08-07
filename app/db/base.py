@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.core.config import settings
+
 
 # Import Base and all models to ensure they are registered
 from .base_class import Base  # noqa
